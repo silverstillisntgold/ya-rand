@@ -157,11 +157,9 @@ pub trait Generator: Sized {
     /// use ya_rand::*;
     ///
     /// let mut rng = new_rng();
-    /// assert!(rng.bound(0) == 0);
     /// for i in 1..=4000 {
     ///     for _ in 0..(i * 2) {
-    ///         let res = rng.bound(i) < i;
-    ///         assert!(res);
+    ///         assert!(rng.bound(i) < i);
     ///     }
     /// }
     /// ```
@@ -169,8 +167,8 @@ pub trait Generator: Sized {
     fn bound(&mut self, bound: u64) -> u64 {
         let mut mul = || wide_mul(self.u64(), bound);
         let (mut high, mut low) = mul();
+        // Will nearly always be false when `bound` isn't close to u64::MAX.
         match low < bound {
-            // Will nearly always be false when `bound` isn't close to u64::MAX.
             false => {}
             true => {
                 let threshold = bound.wrapping_neg() % bound;
@@ -178,9 +176,6 @@ pub trait Generator: Sized {
                     (high, low) = mul();
                 }
             }
-        }
-        unsafe {
-            assert_unchecked((bound != 0 && high < bound) || (high == 0));
         }
         high
     }
@@ -192,8 +187,7 @@ pub trait Generator: Sized {
     /// use ya_rand::*;
     ///
     /// let mut rng = new_rng();
-    /// assert!(rng.bound_inclusive(0) == 0);
-    /// for i in 1..=4000 {
+    /// for i in 0..=4000 {
     ///     for _ in 0..(i * 2) {
     ///         assert!(rng.bound_inclusive(i) <= i);
     ///     }
@@ -208,7 +202,7 @@ pub trait Generator: Sized {
     #[inline]
     fn range(&mut self, start: i64, end: i64) -> i64 {
         let delta = end - start;
-        debug_assert!(delta >= 0);
+        debug_assert!(delta > 0);
         (self.bound(delta as u64) as i64) + start
     }
 
@@ -228,20 +222,6 @@ pub trait Generator: Sized {
     #[inline]
     fn f32(&mut self) -> f32 {
         (self.bits(F32_MANT) as f32) / F32_DIVISOR
-    }
-
-    /// Returns a uniformly distributed f64 in the interval \[0.0, 1.0\].
-    #[inline]
-    fn f64_inclusive(&mut self) -> f64 {
-        let result = self.bound_inclusive(F64_MAX_PRECISE);
-        (result as f64) / F64_DIVISOR
-    }
-
-    /// Returns a uniformly distributed f32 in the interval \[0.0, 1.0\].
-    #[inline]
-    fn f32_inclusive(&mut self) -> f32 {
-        let result = self.bound_inclusive(F32_MAX_PRECISE);
-        (result as f32) / F32_DIVISOR
     }
 
     /// Returns a uniformly distributed f64 in the interval (0.0, 1.0].
@@ -266,12 +246,26 @@ pub trait Generator: Sized {
         (nonzero as f32) / F32_DIVISOR
     }
 
+    /// Returns a uniformly distributed f64 in the interval \[0.0, 1.0\].
+    #[inline]
+    fn f64_inclusive(&mut self) -> f64 {
+        let result = self.bound_inclusive(F64_MAX_PRECISE);
+        (result as f64) / F64_DIVISOR
+    }
+
+    /// Returns a uniformly distributed f32 in the interval \[0.0, 1.0\].
+    #[inline]
+    fn f32_inclusive(&mut self) -> f32 {
+        let result = self.bound_inclusive(F32_MAX_PRECISE);
+        (result as f32) / F32_DIVISOR
+    }
+
     /// Returns a uniformly distributed f64 in the interval (-1.0, 1.0).
     #[inline]
     fn f64_wide(&mut self) -> f64 {
         // This approach is slightly faster than using Generator::range.
         const BITS: u32 = F64_MANT + 1;
-        const OFFSET: i64 = 1 << F64_MANT;
+        const OFFSET: i64 = F64_MAX_PRECISE as i64;
         let mut x: i64;
         loop {
             // Start with an interval of [0, 2^54)
@@ -310,7 +304,6 @@ pub trait Generator: Sized {
             s = (x * x) + (y * y);
             // Reroll if s does not lie within the unit circle
             match s < 1.0 && s != 0.0 {
-                // Odds of true are ~75%
                 true => break,
                 false => {}
             }

@@ -3,17 +3,18 @@ This crate provides simple and fast pseudo random number generation.
 
 # Usage
 
-YA-Rand is intended to be simple and fast above all else. Glob import the contents of the
-library and use [`new_rng`] to create new RNGs whenever you need them. If you need cryptographic
-security, enable the **secure** library feature and use [`new_rng_secure`].
+Glob import the contents of the library and use [`new_rng`] to create new RNGs wherever
+you need them. Then call whatever method you require on that instance.
+
+If you need cryptographic security, enable the **secure** library feature and use [`new_rng_secure`].
 
 ```
 use ya_rand::*;
 
 let mut rng = new_rng();
-let max: u64 = 15;
-let val: u64 = rng.bound(max);
+let max: u64 = 69;
 // Yep, that's all there is to it.
+let val: u64 = rng.bound(max);
 assert!(val < max);
 ```
 
