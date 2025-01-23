@@ -50,6 +50,11 @@ pub trait SeedableGenerator {
     fn new_with_seed(seed: u64) -> Self;
 }
 
+pub trait JumpableGenerator {
+    /// TODO: docs
+    fn jump(&mut self) -> Self;
+}
+
 pub trait Generator: Sized {
     /// Creates a generator using randomness provided by the OS.
     ///
