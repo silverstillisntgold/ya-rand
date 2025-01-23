@@ -3,18 +3,11 @@ name = "ya-rand"
 version = "0.1.0"
 edition = "2021"
 
+# See crate-level documentation for explanantion of features.
 [features]
-# This crate is no_std compatible.
 default = ["std"]
-# Marks each Generator::u64 implementation with #[inline]. Should generally increase
-# runtime performance at the cost of binary size and maybe compile time. You'll have
-# to test your specific use-case to determine how much this feature will impact you.
 inline = []
-# Enables infrastructure for cryptographically secure number generation via the
-# rand_chacha crate. Noticeably increases compile time and binary size.
 secure = ["dep:rand_chacha"]
-# Enables normal and exponential distributions, error type conversions for getrandom,
-# and SIMD optimizations in the rand_chacha crate.
 std = ["getrandom/std", "rand_chacha?/std"]
 
 [dependencies]

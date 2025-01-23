@@ -3,21 +3,34 @@ This crate provides simple and fast pseudo random number generation.
 
 # Usage
 
-TODO
+YA-Rand is intended to be simple and fast above all else. Glob import the contents of the
+library and use [`new_rng`] to create new RNGs whenever you need them. If you need cryptographic
+security, enable the **secure** library feature and use [`new_rng_secure`].
+
+```
+use ya_rand::*;
+
+let mut rng = new_rng();
+let max: u64 = 15;
+let val: u64 = rng.bound(max);
+// Yep, that's all there is to it.
+assert!(val < max);
+```
 
 # Features
 * **std** -
-    Enabled by default.
+    Enabled by default. Enables normal and exponential distributions, error type conversions
+    for getrandom, and SIMD optimizations in the rand_chacha crate.
 * **inline** -
-    Might improve speed.
+    Marks each [`Generator::u64`] implementation with #\[inline\]. Should generally increase
+    runtime performance at the cost of binary size and maybe compile time. You'll have
+    to test your specific use-case to determine how much this feature will impact you.
 * **secure** -
-    Enables Cryptographic RNG infrastructure.
+    Enables infrastructure for cryptographically secure random number generation via the
+    [`rand_chacha`] crate. Noticeably increases compile time and binary size.
 */
 
 #![no_std]
-
-#[cfg(feature = "std")]
-extern crate std;
 
 mod rng;
 mod util;
@@ -33,7 +46,7 @@ pub use xoshiro512pp::Xoshiro512pp;
 /// The recommended generator for all non-cryptographic purposes.
 pub type ShiroRng = Xoshiro256pp;
 
-/// The recommended way to create new Pseudo-RNG instances.
+/// The recommended way to create new PRNG instances.
 ///
 /// Identical to calling [`ShiroRng::new`] or [`Xoshiro256pp::new`].
 #[inline]
@@ -48,7 +61,7 @@ pub use rng::SecureGenerator;
 #[cfg(feature = "secure")]
 pub use secure::SecureRng;
 
-/// The recommended way to create new Crypto-RNG instances.
+/// The recommended way to create new CRNG instances.
 ///
 /// Identical to calling [`SecureRng::new`].
 #[cfg(feature = "secure")]
@@ -59,15 +72,17 @@ pub fn new_rng_secure() -> SecureRng {
 
 #[cfg(test)]
 mod test {
+    extern crate std;
+
     use super::*;
     use std::collections::HashSet;
 
-    const ITERATIONS: u64 = 1 << 13;
+    const ITERATIONS: u64 = 1 << 12;
     const CAP: usize = 100;
 
     #[test]
     pub fn ascii_alphabetic() {
-        let mut rng = ShiroRng::new();
+        let mut rng = new_rng();
         let mut vals = HashSet::with_capacity(CAP);
         for _ in 0..ITERATIONS {
             let result = rng.ascii_alphabetic();
@@ -79,7 +94,7 @@ mod test {
 
     #[test]
     pub fn ascii_uppercase() {
-        let mut rng = ShiroRng::new();
+        let mut rng = new_rng();
         let mut vals = HashSet::with_capacity(CAP);
         for _ in 0..ITERATIONS {
             let result = rng.ascii_uppercase();
@@ -91,7 +106,7 @@ mod test {
 
     #[test]
     pub fn ascii_lowercase() {
-        let mut rng = ShiroRng::new();
+        let mut rng = new_rng();
         let mut vals = HashSet::with_capacity(CAP);
         for _ in 0..ITERATIONS {
             let result = rng.ascii_lowercase();
@@ -103,7 +118,7 @@ mod test {
 
     #[test]
     pub fn ascii_alphanumeric() {
-        let mut rng = ShiroRng::new();
+        let mut rng = new_rng();
         let mut vals = HashSet::with_capacity(CAP);
         for _ in 0..ITERATIONS {
             let result = rng.ascii_alphanumeric();
@@ -115,7 +130,7 @@ mod test {
 
     #[test]
     pub fn ascii_digit() {
-        let mut rng = ShiroRng::new();
+        let mut rng = new_rng();
         let mut vals = HashSet::with_capacity(CAP);
         for _ in 0..ITERATIONS {
             let result = rng.ascii_digit();
@@ -123,5 +138,18 @@ mod test {
             vals.insert(result);
         }
         assert!(vals.len() == 10);
+    }
+
+    #[test]
+    fn wide_mul() {
+        const SHIFT: u32 = 48;
+        const EXPECTED_HIGH: u64 = 1 << ((SHIFT * 2) - u64::BITS);
+        const EXPECTED_LOW: u64 = 0;
+        let x = 1 << SHIFT;
+        let y = x;
+        // 2^48 * 2^48 = 2^96
+        let (high, low) = crate::util::wide_mul(x, y);
+        assert!(high == EXPECTED_HIGH);
+        assert!(low == EXPECTED_LOW);
     }
 }

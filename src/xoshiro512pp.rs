@@ -12,6 +12,7 @@ pub struct Xoshiro512pp {
 }
 
 impl Default for Xoshiro512pp {
+    #[inline]
     fn default() -> Self {
         Self::new_with_seed(0)
     }
@@ -19,14 +20,14 @@ impl Default for Xoshiro512pp {
 
 impl SeedableGenerator for Xoshiro512pp {
     fn new_with_seed(seed: u64) -> Self {
-        let state = util::new_with_seed(seed);
+        let state = util::seeded_state(seed);
         Self { state }
     }
 }
 
 impl Generator for Xoshiro512pp {
     fn try_new() -> Result<Self, getrandom::Error> {
-        let state = util::try_new()?;
+        let state = util::seeded_state_secure()?;
         Ok(Self { state })
     }
 

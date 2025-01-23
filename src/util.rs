@@ -1,6 +1,10 @@
+use core::mem::size_of;
+use core::slice::from_raw_parts_mut;
+use getrandom::{fill, Error};
+
 /// Creates and returns an array filled with random data from the
 /// output of a SplitMix64 PRNG, which is seeded using `seed`.
-pub fn new_with_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
+pub fn seeded_state<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
     let mut state = [0; SIZE];
     let mut x = seed;
     // SplitMix64 from https://prng.di.unimi.it/splitmix64.c.
@@ -16,16 +20,16 @@ pub fn new_with_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
 
 /// Attempts to create and return an array filled with random
 /// data from operating system entropy.
-pub fn try_new<const SIZE: usize>() -> Result<[u64; SIZE], getrandom::Error> {
+pub fn seeded_state_secure<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
     let mut state = [0; SIZE];
     // SAFETY: I'm over here strokin' my dick
     // I got lotion on my dick right now.
     let state_bytes = unsafe {
         let data = state.as_mut_ptr().cast();
         let len = state.len() * size_of::<u64>();
-        core::slice::from_raw_parts_mut(data, len)
+        from_raw_parts_mut(data, len)
     };
-    getrandom::fill(state_bytes)?;
+    fill(state_bytes)?;
     Ok(state)
 }
 
@@ -33,40 +37,8 @@ pub fn try_new<const SIZE: usize>() -> Result<[u64; SIZE], getrandom::Error> {
 /// the result as a tuple of u64 values (high, low).
 #[inline(always)]
 pub fn wide_mul(x: u64, y: u64) -> (u64, u64) {
-    let product = (x as u128) * (y as u128);
+    let product = (x as u128).wrapping_mul(y as u128);
     let high = (product >> u64::BITS) as u64;
     let low = product as u64;
     (high, low)
-}
-
-/*pub trait IntoInt<T> {
-    fn into_int(self) -> T;
-}
-
-#[macro_export]
-macro_rules! into_impl {
-    ($($t:ty), +) => {
-        $(
-            impl IntoInt<$t> for u64 {
-                fn into_int(self) -> $t {
-                    self as $t
-                }
-            }
-        )*
-    };
-}
-
-into_impl!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize);*/
-
-#[cfg(test)]
-mod test {
-    #[test]
-    fn wide_mul() {
-        const SHIFT: u32 = 48;
-        let x = 1 << SHIFT;
-        let y = x;
-        let (high, low) = super::wide_mul(x, y);
-        assert!(high == 1 << ((SHIFT * 2) - u64::BITS));
-        assert!(low == 0);
-    }
 }

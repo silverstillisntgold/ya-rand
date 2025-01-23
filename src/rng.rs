@@ -1,8 +1,14 @@
+use crate::util::wide_mul;
+use core::hint::assert_unchecked;
+use core::ptr::swap;
+
 const F64_MANT: u32 = f64::MANTISSA_DIGITS;
 const F32_MANT: u32 = f32::MANTISSA_DIGITS;
-const F64_DIVISOR: f64 = (1u64 << F64_MANT) as f64;
-const F32_DIVISOR: f32 = (1u64 << F32_MANT) as f32;
-const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+const F64_MAX_PRECISE: u64 = 1 << F64_MANT;
+const F32_MAX_PRECISE: u64 = 1 << F32_MANT;
+const F64_DIVISOR: f64 = F64_MAX_PRECISE as f64;
+const F32_DIVISOR: f32 = F32_MAX_PRECISE as f32;
+const ASCII_CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 #[cfg(feature = "secure")]
 pub trait SecureGenerator {
@@ -13,7 +19,7 @@ pub trait SecureGenerator {
     /// ```
     /// use ya_rand::*;
     ///
-    /// let mut rng = SecureRng::new();
+    /// let mut rng = new_rng_secure();
     /// let mut data = [0; 1738];
     /// rng.fill_bytes(&mut data);
     /// assert!(data.iter().any(|v| *v != 0));
@@ -27,10 +33,9 @@ pub trait SeedableGenerator {
     ///
     /// As a rule: unless you are **absolutely certain** that you need to manually
     /// seed a generator, you don't.
-    /// Instead, use [`Generator::new`] or [`Generator::try_new`] whenever you need to
-    /// create a new instance.
+    /// Instead, use [`crate::new_rng`] when you need to create a new instance.
     ///
-    /// If you have a scenario where you do need a set seed, prefer to use the `Default`
+    /// If you have a scenario where you really need a set seed, prefer to use the `Default`
     /// implementation of the desired generator.
     ///
     /// # Examples
@@ -49,7 +54,7 @@ pub trait Generator: Sized {
     /// Creates a generator using randomness provided by the OS.
     ///
     /// It is recommended to instead use the top-level [`crate::new_rng`] instead
-    /// of calling this function with a specific generator type.
+    /// of calling this function on a specific generator type.
     ///
     /// # Examples
     /// ```
@@ -61,9 +66,17 @@ pub trait Generator: Sized {
     /// let mut rng2 = ShiroRng::new();
     /// // Even more explicit
     /// let mut rng3 = Xoshiro256pp::new();
+    /// // Since these are all created using OS entropy, the odds of
+    /// // their states colliding should be vanishingly small.
+    /// assert!(rng1 != rng2);
+    /// assert!(rng1 != rng3);
+    /// assert!(rng2 != rng3);
     /// ```
     fn new() -> Self {
-        Self::try_new().expect("retrieving random data from the operating system should never fail")
+        Self::try_new().expect(
+            "WARNING: retrieving random data from the operating system should never fail; \
+            something has gone terribly wrong",
+        )
     }
 
     /// Creates a generator using randomness provided by the OS.
@@ -75,7 +88,7 @@ pub trait Generator: Sized {
     /// most users are going to be able to address.
     ///
     /// Stick to using [`crate::new_rng`], unless you **need** a generator of a
-    /// different type (and you probably don't), then use `new`.
+    /// different type (and you probably don't), then use `new` on your desired type.
     fn try_new() -> Result<Self, getrandom::Error>;
 
     /// Returns a uniformly distributed u64 in the interval [0, 2<sup>`bit_count`</sup>).
@@ -85,7 +98,7 @@ pub trait Generator: Sized {
         self.u64() >> (u64::BITS - bit_count)
     }
 
-    /// Returns a bool with 1 in 2 odds of being true.
+    /// Returns a bool with 50% odds of being true.
     ///
     /// A simple coinflip.
     ///
@@ -136,7 +149,8 @@ pub trait Generator: Sized {
 
     /// Returns a uniformly distributed u64 in the inverval [0, `bound`).
     ///
-    /// Prefer using [`Generator::bits`] when `bound` is a power of 2.
+    /// Using [`Generator::bits`] when `bound` happens to be a power of 2
+    /// will be slightly faster.
     ///
     /// # Examples
     /// ```
@@ -146,22 +160,27 @@ pub trait Generator: Sized {
     /// assert!(rng.bound(0) == 0);
     /// for i in 1..=4000 {
     ///     for _ in 0..(i * 2) {
-    ///         assert!(rng.bound(i) < i);
+    ///         let res = rng.bound(i) < i;
+    ///         assert!(res);
     ///     }
     /// }
     /// ```
     #[inline]
     fn bound(&mut self, bound: u64) -> u64 {
-        use crate::util::wide_mul;
-        let (mut high, mut low) = wide_mul(self.u64(), bound);
+        let mut mul = || wide_mul(self.u64(), bound);
+        let (mut high, mut low) = mul();
         match low < bound {
+            // Will nearly always be false when `bound` isn't close to u64::MAX.
             false => {}
             true => {
                 let threshold = bound.wrapping_neg() % bound;
                 while low < threshold {
-                    (high, low) = wide_mul(self.u64(), bound);
+                    (high, low) = mul();
                 }
             }
+        }
+        unsafe {
+            assert_unchecked((bound != 0 && high < bound) || (high == 0));
         }
         high
     }
@@ -189,7 +208,7 @@ pub trait Generator: Sized {
     #[inline]
     fn range(&mut self, start: i64, end: i64) -> i64 {
         let delta = end - start;
-        debug_assert!(delta > 1);
+        debug_assert!(delta >= 0);
         (self.bound(delta as u64) as i64) + start
     }
 
@@ -205,18 +224,35 @@ pub trait Generator: Sized {
         (self.bits(F64_MANT) as f64) / F64_DIVISOR
     }
 
+    /// Returns a uniformly distributed f32 in the interval [0.0, 1.0).
+    #[inline]
+    fn f32(&mut self) -> f32 {
+        (self.bits(F32_MANT) as f32) / F32_DIVISOR
+    }
+
+    /// Returns a uniformly distributed f64 in the interval \[0.0, 1.0\].
+    #[inline]
+    fn f64_inclusive(&mut self) -> f64 {
+        let result = self.bound_inclusive(F64_MAX_PRECISE);
+        (result as f64) / F64_DIVISOR
+    }
+
+    /// Returns a uniformly distributed f32 in the interval \[0.0, 1.0\].
+    #[inline]
+    fn f32_inclusive(&mut self) -> f32 {
+        let result = self.bound_inclusive(F32_MAX_PRECISE);
+        (result as f32) / F32_DIVISOR
+    }
+
     /// Returns a uniformly distributed f64 in the interval (0.0, 1.0].
     #[inline]
     fn f64_nonzero(&mut self) -> f64 {
         // Interval of (0, 2^53]
         let nonzero = self.bits(F64_MANT) + 1;
+        unsafe {
+            assert_unchecked(nonzero != 0);
+        }
         (nonzero as f64) / F64_DIVISOR
-    }
-
-    /// Returns a uniformly distributed f32 in the interval [0.0, 1.0).
-    #[inline]
-    fn f32(&mut self) -> f32 {
-        (self.bits(F32_MANT) as f32) / F32_DIVISOR
     }
 
     /// Returns a uniformly distributed f32 in the interval (0.0, 1.0].
@@ -224,30 +260,16 @@ pub trait Generator: Sized {
     fn f32_nonzero(&mut self) -> f32 {
         // Interval of (0, 2^24]
         let nonzero = self.bits(F32_MANT) + 1;
+        unsafe {
+            assert_unchecked(nonzero != 0);
+        }
         (nonzero as f32) / F32_DIVISOR
     }
-
-    /// Returns two independent and uniformly distributed
-    /// f32 values in the interval [0.0, 1.0).
-    ///
-    /// Only makes one call to the underlying generator for each
-    /// f32 pair.
-    /*#[inline]
-    fn f32_fast(&mut self) -> (f32, f32) {
-        const BITS: u32 = F32_MANT * 2;
-        const MASK: u64 = (1 << F32_MANT) - 1;
-        let random_48_bits = self.bits(BITS);
-        let bottom_24_bits = random_48_bits & MASK;
-        let upper_24_bits = random_48_bits >> F32_MANT;
-        let float2 = (bottom_24_bits as f32) / F32_DIVISOR;
-        let float1 = (upper_24_bits as f32) / F32_DIVISOR;
-        (float1, float2)
-    }*/
 
     /// Returns a uniformly distributed f64 in the interval (-1.0, 1.0).
     #[inline]
     fn f64_wide(&mut self) -> f64 {
-        // This approach is faster than using Generator::range.
+        // This approach is slightly faster than using Generator::range.
         const BITS: u32 = F64_MANT + 1;
         const OFFSET: i64 = 1 << F64_MANT;
         let mut x: i64;
@@ -255,14 +277,23 @@ pub trait Generator: Sized {
             // Start with an interval of [0, 2^54)
             x = self.bits(BITS) as i64;
             // Interval is now (0, 2^54)
-            if x != 0 {
-                break;
+            match x != 0 {
+                true => break,
+                false => {}
             }
         }
         // Shift interval to (-2^53, 2^53)
         x -= OFFSET;
-        // MAGIC
         (x as f64) / F64_DIVISOR
+    }
+
+    /// Returns a uniformly distributed f64 in the interval \[-1.0, 1.0\].
+    #[inline]
+    fn f64_wide_inclusive(&mut self) -> f64 {
+        const END: i64 = F64_MAX_PRECISE as i64;
+        const START: i64 = -END;
+        let result = self.range_inclusive(START, END);
+        (result as f64) / F64_DIVISOR
     }
 
     /// Returns two indepedent and normally distributed f64 values with
@@ -278,11 +309,13 @@ pub trait Generator: Sized {
             y = self.f64_wide();
             s = (x * x) + (y * y);
             // Reroll if s does not lie within the unit circle
-            if s < 1.0 && s != 0.0 {
-                break;
+            match s < 1.0 && s != 0.0 {
+                // Odds of true are ~75%
+                true => break,
+                false => {}
             }
         }
-        let t = f64::sqrt(2.0 * s.ln().abs() / s);
+        let t = (2.0 * s.ln().abs() / s).sqrt();
         (x * t, y * t)
     }
 
@@ -291,6 +324,7 @@ pub trait Generator: Sized {
     #[cfg(feature = "std")]
     #[inline]
     fn normal_distribution(&mut self, mean: f64, stddev: f64) -> (f64, f64) {
+        debug_assert!(stddev != 0.0);
         let (x, y) = self.normal();
         ((x * stddev) + mean, (y * stddev) + mean)
     }
@@ -299,13 +333,16 @@ pub trait Generator: Sized {
     #[cfg(feature = "std")]
     #[inline]
     fn exponential(&mut self) -> f64 {
+        // Using abs() instead of negating the result of ln()
+        // to avoid outputs of -0.0.
         self.f64_nonzero().ln().abs()
     }
 
-    /// Return an exponentially distributed f64 with user-defined `lambda`.
+    /// Returns an exponentially distributed f64 with user-defined `lambda`.
     #[cfg(feature = "std")]
     #[inline]
     fn exponential_lambda(&mut self, lambda: f64) -> f64 {
+        debug_assert!(lambda != 0.0);
         self.exponential() / lambda
     }
 
@@ -348,42 +385,41 @@ pub trait Generator: Sized {
             return None;
         }
         let idx = self.bound(len as u64) as usize;
-        // SAFETY: fuck u thats waht.
-        unsafe { Some(iter.nth(idx).unwrap_unchecked()) }
+        Some(unsafe { iter.nth(idx).unwrap_unchecked() })
     }
 
     /// Returns a randomly selected ASCII alphabetic character.
     #[inline]
     fn ascii_alphabetic(&mut self) -> char {
-        let selection = unsafe { self.choice(&CHARS[..52]).unwrap_unchecked() };
+        let selection = unsafe { self.choice(&ASCII_CHARS[..52]).unwrap_unchecked() };
         *selection as char
     }
 
     /// Returns a randomly selected ASCII uppercase character.
     #[inline]
     fn ascii_uppercase(&mut self) -> char {
-        let selection = unsafe { self.choice(&CHARS[..26]).unwrap_unchecked() };
+        let selection = unsafe { self.choice(&ASCII_CHARS[..26]).unwrap_unchecked() };
         *selection as char
     }
 
     /// Returns a randomly selected ASCII lowercase character.
     #[inline]
     fn ascii_lowercase(&mut self) -> char {
-        let selection = unsafe { self.choice(&CHARS[26..52]).unwrap_unchecked() };
+        let selection = unsafe { self.choice(&ASCII_CHARS[26..52]).unwrap_unchecked() };
         *selection as char
     }
 
     /// Returns a randomly selected ASCII alphanumeric character.
     #[inline]
     fn ascii_alphanumeric(&mut self) -> char {
-        let selection = unsafe { self.choice(&CHARS[..]).unwrap_unchecked() };
+        let selection = unsafe { self.choice(&ASCII_CHARS[..]).unwrap_unchecked() };
         *selection as char
     }
 
     /// Returns a randomly selected ASCII digit character.
     #[inline]
     fn ascii_digit(&mut self) -> char {
-        let selection = unsafe { self.choice(&CHARS[52..]).unwrap_unchecked() };
+        let selection = unsafe { self.choice(&ASCII_CHARS[52..]).unwrap_unchecked() };
         *selection as char
     }
 
@@ -403,6 +439,7 @@ pub trait Generator: Sized {
     /// rng.shuffle(&mut data);
     /// assert!(data.is_sorted() == false);
     /// ```
+    #[inline(never)]
     fn shuffle<T>(&mut self, slice: &mut [T]) {
         let slice_ptr = slice.as_mut_ptr();
         for i in (1..slice.len()).rev() {
@@ -411,7 +448,7 @@ pub trait Generator: Sized {
             // bounded by slice length; index 'j' will always be
             // in bounds because it's bounded by 'i'.
             unsafe {
-                core::ptr::swap(slice_ptr.add(i), slice_ptr.add(j));
+                swap(slice_ptr.add(i), slice_ptr.add(j));
             }
         }
     }
