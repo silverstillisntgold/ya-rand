@@ -167,7 +167,11 @@ pub trait Generator {
     /// ```
     #[inline]
     fn bound(&mut self, bound: u64) -> u64 {
-        debug_assert!(bound != 0, "you fucking dumbass");
+        // Our compiler hint on `high` fails when bound is 0, which may
+        // introduce undefined behavior. This fixes that issue. Should compile
+        // to a cmov when `bound` isn't a constant, and should be completely
+        // removed when it is.
+        let bound = bound.max(1);
         let (mut high, mut low) = wide_mul(self.u64(), bound);
         // Will nearly always be false when `bound` isn't close to u64::MAX.
         match low < bound {
@@ -179,7 +183,9 @@ pub trait Generator {
                 }
             }
         }
-        debug_assert!(high < bound);
+        unsafe {
+            assert_unchecked(high < bound);
+        }
         high
     }
 
@@ -218,13 +224,21 @@ pub trait Generator {
     /// Returns a uniformly distributed f64 in the interval [0.0, 1.0).
     #[inline]
     fn f64(&mut self) -> f64 {
-        (self.bits(F64_MANT) as f64) / F64_DIVISOR
+        let ret = (self.bits(F64_MANT) as f64) / F64_DIVISOR;
+        unsafe {
+            assert_unchecked(0.0 <= ret && ret < 1.0);
+        }
+        ret
     }
 
     /// Returns a uniformly distributed f32 in the interval [0.0, 1.0).
     #[inline]
     fn f32(&mut self) -> f32 {
-        (self.bits(F32_MANT) as f32) / F32_DIVISOR
+        let ret = (self.bits(F32_MANT) as f32) / F32_DIVISOR;
+        unsafe {
+            assert_unchecked(0.0 <= ret && ret < 1.0);
+        }
+        ret
     }
 
     /// Returns a uniformly distributed f64 in the interval (0.0, 1.0].
@@ -232,10 +246,11 @@ pub trait Generator {
     fn f64_nonzero(&mut self) -> f64 {
         // Interval of (0, 2^53]
         let nonzero = self.bits(F64_MANT) + 1;
+        let ret = (nonzero as f64) / F64_DIVISOR;
         unsafe {
-            assert_unchecked(nonzero != 0);
+            assert_unchecked(0.0 < ret && ret <= 1.0);
         }
-        (nonzero as f64) / F64_DIVISOR
+        ret
     }
 
     /// Returns a uniformly distributed f32 in the interval (0.0, 1.0].
@@ -243,10 +258,11 @@ pub trait Generator {
     fn f32_nonzero(&mut self) -> f32 {
         // Interval of (0, 2^24]
         let nonzero = self.bits(F32_MANT) + 1;
+        let ret = (nonzero as f32) / F32_DIVISOR;
         unsafe {
-            assert_unchecked(nonzero != 0);
+            assert_unchecked(0.0 < ret && ret <= 1.0);
         }
-        (nonzero as f32) / F32_DIVISOR
+        ret
     }
 
     /// Returns a uniformly distributed f64 in the interval (-1.0, 1.0).
@@ -267,7 +283,11 @@ pub trait Generator {
         }
         // Shift interval to (-2^53, 2^53)
         x -= OFFSET;
-        (x as f64) / F64_DIVISOR
+        let ret = (x as f64) / F64_DIVISOR;
+        unsafe {
+            assert_unchecked(-1.0 < ret && ret < 1.0);
+        }
+        ret
     }
 
     /// Returns a uniformly distributed f32 in the interval (-1.0, 1.0).
@@ -288,7 +308,11 @@ pub trait Generator {
         }
         // Shift interval to (-2^24, 2^24)
         x -= OFFSET;
-        (x as f32) / F32_DIVISOR
+        let ret = (x as f32) / F32_DIVISOR;
+        unsafe {
+            assert_unchecked(-1.0 < ret && ret < 1.0);
+        }
+        ret
     }
 
     /// Returns two indepedent and normally distributed f64 values with
