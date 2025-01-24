@@ -20,7 +20,8 @@ assert!(val < max);
 
 # Features
 * **std** -
-    Enabled by default. Enables normal and exponential distributions, error type conversions
+    Enabled by default, but can be disabled for compatibility with `no_std` environments.
+    Enables normal and exponential distributions, error type conversions
     for getrandom, and SIMD optimizations in the rand_chacha crate.
 * **inline** -
     Marks each [`Generator::u64`] implementation with #\[inline\]. Should generally increase
@@ -73,6 +74,9 @@ pub fn new_rng_secure() -> SecureRng {
 
 #[cfg(test)]
 mod test {
+    #[cfg(not(feature = "std"))]
+    compile_error!("tests can only be run when the `std` feature is enabled");
+
     extern crate std;
 
     use super::*;

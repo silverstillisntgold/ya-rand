@@ -140,7 +140,7 @@ pub trait Generator {
     ///         zeroes += 1;
     ///     }
     /// }
-    /// // Difference should be within ~5%.
+    /// // We expect the difference to be within ~5%.
     /// let THRESHOLD: u64 = ITER_COUNT / 20;
     /// assert!(ones.abs_diff(zeroes) <= THRESHOLD);
     /// ```
@@ -278,9 +278,9 @@ pub trait Generator {
         const OFFSET: i64 = F32_MAX_PRECISE as i64;
         let mut x: i64;
         loop {
-            // Start with an interval of [0, 2^24)
+            // Start with an interval of [0, 2^25)
             x = self.bits(BITS) as i64;
-            // Interval is now (0, 2^24)
+            // Interval is now (0, 2^25)
             match x != 0 {
                 true => break,
                 false => {}
@@ -296,6 +296,7 @@ pub trait Generator {
     #[cfg(feature = "std")]
     #[inline]
     fn normal(&mut self) -> (f64, f64) {
+        // Marsaglia polar method.
         let mut x: f64;
         let mut y: f64;
         let mut s: f64;
@@ -385,36 +386,31 @@ pub trait Generator {
     /// Returns a randomly selected ASCII alphabetic character.
     #[inline]
     fn ascii_alphabetic(&mut self) -> char {
-        let selection = unsafe { self.choice(&ASCII_CHARS[..52]).unwrap_unchecked() };
-        *selection as char
+        unsafe { *self.choice(&ASCII_CHARS[..52]).unwrap_unchecked() as char }
     }
 
     /// Returns a randomly selected ASCII uppercase character.
     #[inline]
     fn ascii_uppercase(&mut self) -> char {
-        let selection = unsafe { self.choice(&ASCII_CHARS[..26]).unwrap_unchecked() };
-        *selection as char
+        unsafe { *self.choice(&ASCII_CHARS[..26]).unwrap_unchecked() as char }
     }
 
     /// Returns a randomly selected ASCII lowercase character.
     #[inline]
     fn ascii_lowercase(&mut self) -> char {
-        let selection = unsafe { self.choice(&ASCII_CHARS[26..52]).unwrap_unchecked() };
-        *selection as char
+        unsafe { *self.choice(&ASCII_CHARS[26..52]).unwrap_unchecked() as char }
     }
 
     /// Returns a randomly selected ASCII alphanumeric character.
     #[inline]
     fn ascii_alphanumeric(&mut self) -> char {
-        let selection = unsafe { self.choice(&ASCII_CHARS[..]).unwrap_unchecked() };
-        *selection as char
+        unsafe { *self.choice(&ASCII_CHARS[..]).unwrap_unchecked() as char }
     }
 
     /// Returns a randomly selected ASCII digit character.
     #[inline]
     fn ascii_digit(&mut self) -> char {
-        let selection = unsafe { self.choice(&ASCII_CHARS[52..]).unwrap_unchecked() };
-        *selection as char
+        unsafe { *self.choice(&ASCII_CHARS[52..]).unwrap_unchecked() as char }
     }
 
     /// Performs a Fisher-Yates shuffle on the contents of `slice`.

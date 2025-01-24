@@ -1,6 +1,6 @@
 use crate::{
     rng::{EntropyGenerator, Generator, SeedableGenerator},
-    util::{self, RngResult, ShadowGenerator},
+    util::{self, IntermediateRng, ShadowGenerator},
 };
 
 /// Rust implementation of the xoshiro256++ PRNG.
@@ -21,12 +21,11 @@ impl Default for Xoshiro256pp {
 }
 
 impl Iterator for Xoshiro256pp {
-    type Item = RngResult;
+    type Item = IntermediateRng;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let result = self.u64_as_result();
-        Some(result)
+        Some(self.u64_intermediate())
     }
 }
 

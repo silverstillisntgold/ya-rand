@@ -1,13 +1,12 @@
 use crate::Generator;
-use core::mem::size_of;
-use core::slice::from_raw_parts_mut;
+use core::{mem::size_of, slice::from_raw_parts_mut};
 use getrandom::{fill, Error};
 
 /// Temporary storage for the result of a [`Generator::u64`] call.
 /// Can be used to call any [`Generator`] method.
-pub struct RngResult(u64);
+pub struct IntermediateRng(u64);
 
-impl Generator for RngResult {
+impl Generator for IntermediateRng {
     #[inline]
     fn u64(&mut self) -> u64 {
         self.0
@@ -15,9 +14,9 @@ impl Generator for RngResult {
 }
 
 pub trait ShadowGenerator {
-    /// Yields the resulting `u64` value from the underlying rng without
-    /// performing any additional computation.
-    fn u64_as_result(&mut self) -> RngResult;
+    /// Calls [`Generator::u64`] on the underlying rng
+    /// and stores the result for future use.
+    fn u64_intermediate(&mut self) -> IntermediateRng;
 }
 
 impl<T> ShadowGenerator for T
@@ -25,9 +24,8 @@ where
     T: Generator,
 {
     #[inline]
-    fn u64_as_result(&mut self) -> RngResult {
-        let result = self.u64();
-        RngResult(result)
+    fn u64_intermediate(&mut self) -> IntermediateRng {
+        IntermediateRng(self.u64())
     }
 }
 

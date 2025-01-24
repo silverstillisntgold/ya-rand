@@ -1,6 +1,6 @@
 use crate::{
     rng::{EntropyGenerator, Generator, SecureGenerator},
-    util::{RngResult, ShadowGenerator},
+    util::{IntermediateRng, ShadowGenerator},
 };
 use rand_chacha::{
     rand_core::{RngCore, SeedableRng},
@@ -17,12 +17,11 @@ pub struct SecureRng {
 }
 
 impl Iterator for SecureRng {
-    type Item = RngResult;
+    type Item = IntermediateRng;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let result = self.u64_as_result();
-        Some(result)
+        Some(self.u64_intermediate())
     }
 }
 
