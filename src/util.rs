@@ -1,6 +1,35 @@
+use crate::Generator;
 use core::mem::size_of;
 use core::slice::from_raw_parts_mut;
 use getrandom::{fill, Error};
+
+/// Temporary storage for the result of a [`Generator::u64`] call.
+/// Can be used to call any [`Generator`] method.
+pub struct RngResult(u64);
+
+impl Generator for RngResult {
+    #[inline]
+    fn u64(&mut self) -> u64 {
+        self.0
+    }
+}
+
+pub trait ShadowGenerator {
+    /// Yields the resulting `u64` value from the underlying rng without
+    /// performing any additional computation.
+    fn u64_as_result(&mut self) -> RngResult;
+}
+
+impl<T> ShadowGenerator for T
+where
+    T: Generator,
+{
+    #[inline]
+    fn u64_as_result(&mut self) -> RngResult {
+        let result = self.u64();
+        RngResult(result)
+    }
+}
 
 /// Creates and returns an array filled with random data from the
 /// output of a SplitMix64 PRNG, which is seeded using `seed`.

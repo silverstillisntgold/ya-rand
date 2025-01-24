@@ -50,12 +50,19 @@ pub trait SeedableGenerator {
     fn new_with_seed(seed: u64) -> Self;
 }
 
-pub trait JumpableGenerator {
-    /// TODO: docs
-    fn jump(&mut self) -> Self;
-}
+pub trait EntropyGenerator: Sized {
+    /// Creates a generator using randomness provided by the OS.
+    ///
+    /// Unlike [`Generator::new`], which will panic on failure, `try_new`
+    /// propagates the error-handling responsibility to the user. That being
+    /// said, the probability of your operating systems RNG failing is absurdly
+    /// low. And in the case that is does fail, that's not really an issue
+    /// most users are going to be able to address.
+    ///
+    /// Stick to using [`crate::new_rng`], unless you **need** a generator of a
+    /// different type (and you probably don't), then use `new` on your desired type.
+    fn try_new() -> Result<Self, getrandom::Error>;
 
-pub trait Generator: Sized {
     /// Creates a generator using randomness provided by the OS.
     ///
     /// It is recommended to instead use the top-level [`crate::new_rng`] instead
@@ -83,18 +90,29 @@ pub trait Generator: Sized {
             something has gone terribly wrong",
         )
     }
+}
 
-    /// Creates a generator using randomness provided by the OS.
-    ///
-    /// Unlike [`Generator::new`], which will panic on failure, `try_new`
-    /// propagates the error-handling responsibility to the user. That being
-    /// said, the probability of your operating systems RNG failing is absurdly
-    /// low. And in the case that is does fail, that's not really an issue
-    /// most users are going to be able to address.
-    ///
-    /// Stick to using [`crate::new_rng`], unless you **need** a generator of a
-    /// different type (and you probably don't), then use `new` on your desired type.
-    fn try_new() -> Result<Self, getrandom::Error>;
+pub trait Generator {
+    /// Returns a uniformly distributed u64 in the interval [0, 2<sup>64</sup>).
+    fn u64(&mut self) -> u64;
+
+    /// Returns a uniformly distributed u32 in the interval [0, 2<sup>32</sup>).
+    #[inline]
+    fn u32(&mut self) -> u32 {
+        self.bits(u32::BITS) as u32
+    }
+
+    /// Returns a uniformly distributed u16 in the interval [0, 2<sup>16</sup>).
+    #[inline]
+    fn u16(&mut self) -> u16 {
+        self.bits(u16::BITS) as u16
+    }
+
+    /// Returns a uniformly distributed u8 in the interval [0, 2<sup>8</sup>).
+    #[inline]
+    fn u8(&mut self) -> u8 {
+        self.bits(u8::BITS) as u8
+    }
 
     /// Returns a uniformly distributed u64 in the interval [0, 2<sup>`bit_count`</sup>).
     #[inline]
@@ -131,27 +149,6 @@ pub trait Generator: Sized {
         self.bits(1) == 1
     }
 
-    /// Returns a uniformly distributed u64 in the interval [0, 2<sup>64</sup>).
-    fn u64(&mut self) -> u64;
-
-    /// Returns a uniformly distributed u32 in the interval [0, 2<sup>32</sup>).
-    #[inline]
-    fn u32(&mut self) -> u32 {
-        self.bits(u32::BITS) as u32
-    }
-
-    /// Returns a uniformly distributed u16 in the interval [0, 2<sup>16</sup>).
-    #[inline]
-    fn u16(&mut self) -> u16 {
-        self.bits(u16::BITS) as u16
-    }
-
-    /// Returns a uniformly distributed u8 in the interval [0, 2<sup>8</sup>).
-    #[inline]
-    fn u8(&mut self) -> u8 {
-        self.bits(u8::BITS) as u8
-    }
-
     /// Returns a uniformly distributed u64 in the inverval [0, `bound`).
     ///
     /// Using [`Generator::bits`] when `bound` happens to be a power of 2
@@ -170,18 +167,19 @@ pub trait Generator: Sized {
     /// ```
     #[inline]
     fn bound(&mut self, bound: u64) -> u64 {
-        let mut mul = || wide_mul(self.u64(), bound);
-        let (mut high, mut low) = mul();
+        debug_assert!(bound != 0, "you fucking dumbass");
+        let (mut high, mut low) = wide_mul(self.u64(), bound);
         // Will nearly always be false when `bound` isn't close to u64::MAX.
         match low < bound {
             false => {}
             true => {
                 let threshold = bound.wrapping_neg() % bound;
                 while low < threshold {
-                    (high, low) = mul();
+                    (high, low) = wide_mul(self.u64(), bound);
                 }
             }
         }
+        debug_assert!(high < bound);
         high
     }
 
@@ -251,24 +249,10 @@ pub trait Generator: Sized {
         (nonzero as f32) / F32_DIVISOR
     }
 
-    /// Returns a uniformly distributed f64 in the interval \[0.0, 1.0\].
-    #[inline]
-    fn f64_inclusive(&mut self) -> f64 {
-        let result = self.bound_inclusive(F64_MAX_PRECISE);
-        (result as f64) / F64_DIVISOR
-    }
-
-    /// Returns a uniformly distributed f32 in the interval \[0.0, 1.0\].
-    #[inline]
-    fn f32_inclusive(&mut self) -> f32 {
-        let result = self.bound_inclusive(F32_MAX_PRECISE);
-        (result as f32) / F32_DIVISOR
-    }
-
     /// Returns a uniformly distributed f64 in the interval (-1.0, 1.0).
     #[inline]
     fn f64_wide(&mut self) -> f64 {
-        // This approach is slightly faster than using Generator::range.
+        // This approach is faster than using Generator::range.
         const BITS: u32 = F64_MANT + 1;
         const OFFSET: i64 = F64_MAX_PRECISE as i64;
         let mut x: i64;
@@ -286,13 +270,25 @@ pub trait Generator: Sized {
         (x as f64) / F64_DIVISOR
     }
 
-    /// Returns a uniformly distributed f64 in the interval \[-1.0, 1.0\].
+    /// Returns a uniformly distributed f32 in the interval (-1.0, 1.0).
     #[inline]
-    fn f64_wide_inclusive(&mut self) -> f64 {
-        const END: i64 = F64_MAX_PRECISE as i64;
-        const START: i64 = -END;
-        let result = self.range_inclusive(START, END);
-        (result as f64) / F64_DIVISOR
+    fn f32_wide(&mut self) -> f32 {
+        // This approach is faster than using Generator::range.
+        const BITS: u32 = F32_MANT + 1;
+        const OFFSET: i64 = F32_MAX_PRECISE as i64;
+        let mut x: i64;
+        loop {
+            // Start with an interval of [0, 2^24)
+            x = self.bits(BITS) as i64;
+            // Interval is now (0, 2^24)
+            match x != 0 {
+                true => break,
+                false => {}
+            }
+        }
+        // Shift interval to (-2^24, 2^24)
+        x -= OFFSET;
+        (x as f32) / F32_DIVISOR
     }
 
     /// Returns two indepedent and normally distributed f64 values with

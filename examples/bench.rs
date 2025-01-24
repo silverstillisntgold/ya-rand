@@ -11,6 +11,12 @@ type Rng = ShiroRng;
 
 fn main() {
     let mut rng = Rng::new();
+    let xd = Rng::new()
+        .into_iter()
+        .take(ITERATIONS as usize)
+        .map(|mut r| r.f64())
+        .collect::<Vec<_>>();
+    println!("{}", xd.len());
     let mut res = black_box(0);
     let start = Instant::now();
     for _ in 0..ITERATIONS {

@@ -33,16 +33,13 @@ assert!(val < max);
 
 #![no_std]
 
-mod par_iter;
 mod rng;
 mod util;
 mod xoroshiro128pp;
 mod xoshiro256pp;
 mod xoshiro512pp;
 
-pub use rng::JumpableGenerator;
-
-pub use crate::rng::{Generator, SeedableGenerator};
+pub use crate::rng::{EntropyGenerator, Generator, SeedableGenerator};
 pub use xoroshiro128pp::Xoroshiro128pp;
 pub use xoshiro256pp::Xoshiro256pp;
 pub use xoshiro512pp::Xoshiro512pp;

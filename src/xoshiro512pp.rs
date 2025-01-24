@@ -1,5 +1,7 @@
-use crate::rng::{Generator, SeedableGenerator};
-use crate::util;
+use crate::{
+    rng::{EntropyGenerator, Generator, SeedableGenerator},
+    util::{self, RngResult, ShadowGenerator},
+};
 
 /// Rust implementation of the xoshiro512++ PRNG.
 /// This generator is fast, high-quality, and small,
@@ -18,6 +20,16 @@ impl Default for Xoshiro512pp {
     }
 }
 
+impl Iterator for Xoshiro512pp {
+    type Item = RngResult;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        let result = self.u64_as_result();
+        Some(result)
+    }
+}
+
 impl SeedableGenerator for Xoshiro512pp {
     fn new_with_seed(seed: u64) -> Self {
         let state = util::seeded_state(seed);
@@ -25,12 +37,14 @@ impl SeedableGenerator for Xoshiro512pp {
     }
 }
 
-impl Generator for Xoshiro512pp {
+impl EntropyGenerator for Xoshiro512pp {
     fn try_new() -> Result<Self, getrandom::Error> {
         let state = util::seeded_state_secure()?;
         Ok(Self { state })
     }
+}
 
+impl Generator for Xoshiro512pp {
     #[cfg_attr(feature = "inline", inline)]
     fn u64(&mut self) -> u64 {
         let result = self.state[0]
