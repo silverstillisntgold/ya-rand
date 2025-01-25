@@ -11,11 +11,11 @@ type Rng = ShiroRng;
 
 fn main() {
     let rng = Rng::new();
-    let mut res = black_box(0.0);
+    let mut res = black_box(0);
     let start = Instant::now();
     rng.into_iter()
         .take(ITERATIONS)
-        .for_each(|mut r| res = r.exponential());
+        .for_each(|mut r| res = r.u64());
     let time = get_nanos(start);
     println!("execution time: {:.2} ns || {}", time, res);
 }

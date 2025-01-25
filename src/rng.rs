@@ -1,7 +1,3 @@
-use crate::util::wide_mul;
-use core::hint::assert_unchecked;
-use core::ptr::swap;
-
 const F64_MANT: u32 = f64::MANTISSA_DIGITS;
 const F32_MANT: u32 = f32::MANTISSA_DIGITS;
 const F64_MAX_PRECISE: u64 = 1 << F64_MANT;
@@ -167,11 +163,7 @@ pub trait Generator {
     /// ```
     #[inline]
     fn bound(&mut self, bound: u64) -> u64 {
-        // Our compiler hint on `high` fails when bound is 0, which may
-        // introduce undefined behavior. This fixes that issue. Should compile
-        // to a cmov when `bound` isn't a constant, and should be completely
-        // removed when it is.
-        let bound = bound.max(1);
+        use crate::util::wide_mul;
         let (mut high, mut low) = wide_mul(self.u64(), bound);
         // Will nearly always be false when `bound` isn't close to u64::MAX.
         match low < bound {
@@ -182,9 +174,6 @@ pub trait Generator {
                     (high, low) = wide_mul(self.u64(), bound);
                 }
             }
-        }
-        unsafe {
-            assert_unchecked(high < bound);
         }
         high
     }
@@ -224,21 +213,13 @@ pub trait Generator {
     /// Returns a uniformly distributed f64 in the interval [0.0, 1.0).
     #[inline]
     fn f64(&mut self) -> f64 {
-        let ret = (self.bits(F64_MANT) as f64) / F64_DIVISOR;
-        unsafe {
-            assert_unchecked(0.0 <= ret && ret < 1.0);
-        }
-        ret
+        (self.bits(F64_MANT) as f64) / F64_DIVISOR
     }
 
     /// Returns a uniformly distributed f32 in the interval [0.0, 1.0).
     #[inline]
     fn f32(&mut self) -> f32 {
-        let ret = (self.bits(F32_MANT) as f32) / F32_DIVISOR;
-        unsafe {
-            assert_unchecked(0.0 <= ret && ret < 1.0);
-        }
-        ret
+        (self.bits(F32_MANT) as f32) / F32_DIVISOR
     }
 
     /// Returns a uniformly distributed f64 in the interval (0.0, 1.0].
@@ -246,11 +227,7 @@ pub trait Generator {
     fn f64_nonzero(&mut self) -> f64 {
         // Interval of (0, 2^53]
         let nonzero = self.bits(F64_MANT) + 1;
-        let ret = (nonzero as f64) / F64_DIVISOR;
-        unsafe {
-            assert_unchecked(0.0 < ret && ret <= 1.0);
-        }
-        ret
+        (nonzero as f64) / F64_DIVISOR
     }
 
     /// Returns a uniformly distributed f32 in the interval (0.0, 1.0].
@@ -258,11 +235,7 @@ pub trait Generator {
     fn f32_nonzero(&mut self) -> f32 {
         // Interval of (0, 2^24]
         let nonzero = self.bits(F32_MANT) + 1;
-        let ret = (nonzero as f32) / F32_DIVISOR;
-        unsafe {
-            assert_unchecked(0.0 < ret && ret <= 1.0);
-        }
-        ret
+        (nonzero as f32) / F32_DIVISOR
     }
 
     /// Returns a uniformly distributed f64 in the interval (-1.0, 1.0).
@@ -283,11 +256,7 @@ pub trait Generator {
         }
         // Shift interval to (-2^53, 2^53)
         x -= OFFSET;
-        let ret = (x as f64) / F64_DIVISOR;
-        unsafe {
-            assert_unchecked(-1.0 < ret && ret < 1.0);
-        }
-        ret
+        (x as f64) / F64_DIVISOR
     }
 
     /// Returns a uniformly distributed f32 in the interval (-1.0, 1.0).
@@ -308,18 +277,14 @@ pub trait Generator {
         }
         // Shift interval to (-2^24, 2^24)
         x -= OFFSET;
-        let ret = (x as f32) / F32_DIVISOR;
-        unsafe {
-            assert_unchecked(-1.0 < ret && ret < 1.0);
-        }
-        ret
+        (x as f32) / F32_DIVISOR
     }
 
     /// Returns two indepedent and normally distributed f64 values with
     /// mean = 0 and stddev = 1.
     #[cfg(feature = "std")]
     #[inline]
-    fn normal(&mut self) -> (f64, f64) {
+    fn f64_normal(&mut self) -> (f64, f64) {
         // Marsaglia polar method.
         let mut x: f64;
         let mut y: f64;
@@ -342,16 +307,16 @@ pub trait Generator {
     /// user-defined `mean` and `stddev`.
     #[cfg(feature = "std")]
     #[inline]
-    fn normal_distribution(&mut self, mean: f64, stddev: f64) -> (f64, f64) {
+    fn f64_normal_distribution(&mut self, mean: f64, stddev: f64) -> (f64, f64) {
         debug_assert!(stddev != 0.0);
-        let (x, y) = self.normal();
+        let (x, y) = self.f64_normal();
         ((x * stddev) + mean, (y * stddev) + mean)
     }
 
     /// Returns an exponentially distributed f64 with lambda = 1.
     #[cfg(feature = "std")]
     #[inline]
-    fn exponential(&mut self) -> f64 {
+    fn f64_exponential(&mut self) -> f64 {
         // Using abs() instead of negating the result of ln()
         // to avoid outputs of -0.0.
         self.f64_nonzero().ln().abs()
@@ -360,9 +325,9 @@ pub trait Generator {
     /// Returns an exponentially distributed f64 with user-defined `lambda`.
     #[cfg(feature = "std")]
     #[inline]
-    fn exponential_lambda(&mut self, lambda: f64) -> f64 {
+    fn f64_exponential_lambda(&mut self, lambda: f64) -> f64 {
         debug_assert!(lambda != 0.0);
-        self.exponential() / lambda
+        self.f64_exponential() / lambda
     }
 
     /// Returns a randomly selected item from the iterator of `collection`.
@@ -462,7 +427,7 @@ pub trait Generator {
             // bounded by slice length; index 'j' will always be
             // in bounds because it's bounded by 'i'.
             unsafe {
-                swap(slice_ptr.add(i), slice_ptr.add(j));
+                core::ptr::swap(slice_ptr.add(i), slice_ptr.add(j));
             }
         }
     }

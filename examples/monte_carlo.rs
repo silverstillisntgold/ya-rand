@@ -29,7 +29,7 @@ fn test_f32(rng: &mut ShiroRng) {
     println!("Simulated: {}", simulated);
     println!(
         "Delta between const and simulated π: {}",
-        f32::abs(f32_PI - simulated)
+        (f32_PI - simulated).abs()
     );
 }
 
@@ -49,6 +49,6 @@ fn test_f64(rng: &mut ShiroRng) {
     println!("Simulated: {}", simulated);
     println!(
         "Delta between const and simulated π: {}",
-        f64::abs(f64_PI - simulated)
+        (f64_PI - simulated).abs()
     );
 }
