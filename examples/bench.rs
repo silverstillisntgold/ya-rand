@@ -2,22 +2,43 @@ use core::hint::black_box;
 use std::time::Instant;
 use ya_rand::*;
 
-const ITERATIONS: usize = 1 << 26;
+//use rayon::prelude::*;
 
-#[cfg(feature = "secure")]
-type Rng = SecureRng;
-#[cfg(not(feature = "secure"))]
-type Rng = ShiroRng;
+const ITERATIONS: usize = 1 << 27;
 
 fn main() {
-    let rng = Rng::new();
-    let mut res = black_box(0);
+    let mut v = vec![0; ITERATIONS];
+    let (_, t1) = time_op(move || {
+        v.iter_mut().for_each(|v| *v = rand::random::<u64>());
+        black_box(v);
+    });
+
+    let mut v = vec![0; ITERATIONS];
+    let mut rng = fastrand::Rng::with_seed(ShiroRng::new().u64());
+    let (_, t2) = time_op(move || {
+        v.iter_mut().for_each(|v| *v = rng.u64(..));
+        black_box(v);
+    });
+
+    let mut v = vec![0; ITERATIONS];
+    let mut rng = ShiroRng::new();
+    let (_, t3) = time_op(move || {
+        v.iter_mut().for_each(|v| *v = rng.u64());
+        black_box(v);
+    });
+
+    println!("{} || {} || {}", t1, t2, t3);
+}
+
+#[inline(never)]
+fn time_op<OP, R>(op: OP) -> (R, f64)
+where
+    OP: FnOnce() -> R,
+{
     let start = Instant::now();
-    rng.into_iter()
-        .take(ITERATIONS)
-        .for_each(|mut r| res = r.u64());
+    let r = op();
     let time = get_nanos(start);
-    println!("execution time: {:.2} ns || {}", time, res);
+    (r, time)
 }
 
 #[inline(always)]

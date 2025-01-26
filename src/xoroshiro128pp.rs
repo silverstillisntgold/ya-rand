@@ -1,6 +1,6 @@
 use crate::{
-    rng::{EntropyGenerator, Generator, SeedableGenerator},
-    util::{self, IntermediateRng, ShadowGenerator},
+    rng::{Generator, SeedableGenerator},
+    util,
 };
 
 /// Rust implementation of the xoroshiro128++ PRNG.
@@ -20,15 +20,6 @@ impl Default for Xoroshiro128pp {
     }
 }
 
-impl Iterator for Xoroshiro128pp {
-    type Item = IntermediateRng;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        Some(self.u64_intermediate())
-    }
-}
-
 impl SeedableGenerator for Xoroshiro128pp {
     fn new_with_seed(seed: u64) -> Self {
         let state = util::seeded_state(seed);
@@ -36,14 +27,12 @@ impl SeedableGenerator for Xoroshiro128pp {
     }
 }
 
-impl EntropyGenerator for Xoroshiro128pp {
+impl Generator for Xoroshiro128pp {
     fn try_new() -> Result<Self, getrandom::Error> {
         let state = util::seeded_state_secure()?;
         Ok(Self { state })
     }
-}
 
-impl Generator for Xoroshiro128pp {
     #[cfg_attr(feature = "inline", inline)]
     fn u64(&mut self) -> u64 {
         let s0 = self.state[0];

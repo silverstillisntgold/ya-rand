@@ -1,33 +1,5 @@
-use crate::Generator;
 use core::{mem::size_of, slice::from_raw_parts_mut};
-use getrandom::{fill, Error};
-
-/// Temporary storage for the result of a [`Generator::u64`] call.
-/// Can be used to call any [`Generator`] method.
-pub struct IntermediateRng(u64);
-
-impl Generator for IntermediateRng {
-    #[inline]
-    fn u64(&mut self) -> u64 {
-        self.0
-    }
-}
-
-pub trait ShadowGenerator {
-    /// Calls [`Generator::u64`] on the underlying rng
-    /// and stores the result for future use.
-    fn u64_intermediate(&mut self) -> IntermediateRng;
-}
-
-impl<T> ShadowGenerator for T
-where
-    T: Generator,
-{
-    #[inline]
-    fn u64_intermediate(&mut self) -> IntermediateRng {
-        IntermediateRng(self.u64())
-    }
-}
+use getrandom::{fill as get_random, Error};
 
 /// Creates and returns an array filled with random data from the
 /// output of a SplitMix64 PRNG, which is seeded using `seed`.
@@ -58,6 +30,22 @@ pub fn seeded_state_secure<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
     };
     fill(state_bytes)?;
     Ok(state)
+}
+
+/// The Windows 10 RNG is infallible, and the [`getrandom`] internals
+/// reflect this since version 0.3.0. But the backend functions aren't
+/// inlined so rustc is unable to eliminate the error branch in user
+/// code; we do it manually here.
+#[inline(always)]
+pub fn fill(dest: &mut [u8]) -> Result<(), Error> {
+    if cfg!(all(windows, not(target_vendor = "win7"))) {
+        unsafe {
+            get_random(dest).unwrap_unchecked();
+        }
+    } else {
+        get_random(dest)?;
+    }
+    Ok(())
 }
 
 /// Performs 128-bit multiplication on `x` and `y` and returns

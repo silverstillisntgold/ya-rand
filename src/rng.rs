@@ -46,7 +46,7 @@ pub trait SeedableGenerator {
     fn new_with_seed(seed: u64) -> Self;
 }
 
-pub trait EntropyGenerator: Sized {
+pub trait Generator: Sized {
     /// Creates a generator using randomness provided by the OS.
     ///
     /// Unlike [`Generator::new`], which will panic on failure, `try_new`
@@ -86,9 +86,7 @@ pub trait EntropyGenerator: Sized {
             something has gone terribly wrong",
         )
     }
-}
 
-pub trait Generator {
     /// Returns a uniformly distributed u64 in the interval [0, 2<sup>64</sup>).
     fn u64(&mut self) -> u64;
 
@@ -145,10 +143,10 @@ pub trait Generator {
         self.bits(1) == 1
     }
 
-    /// Returns a uniformly distributed u64 in the inverval [0, `bound`).
+    /// Returns a uniformly distributed u64 in the interval [0, `bound`).
     ///
     /// Using [`Generator::bits`] when `bound` happens to be a power of 2
-    /// will be slightly faster.
+    /// is faster and generates less machine code.
     ///
     /// # Examples
     /// ```
@@ -156,7 +154,8 @@ pub trait Generator {
     ///
     /// let mut rng = new_rng();
     /// for i in 1..=4000 {
-    ///     for _ in 0..(i * 2) {
+    ///     let iters = 64.max(i * 2);
+    ///     for _ in 0..iters {
     ///         assert!(rng.bound(i) < i);
     ///     }
     /// }
@@ -169,12 +168,16 @@ pub trait Generator {
         match low < bound {
             false => {}
             true => {
+                // Can actually be a pretty cheap failure branch, since
+                // rustc can compute `threshold` at compile time when `bound`
+                // is a constant.
                 let threshold = bound.wrapping_neg() % bound;
                 while low < threshold {
                     (high, low) = wide_mul(self.u64(), bound);
                 }
             }
         }
+        debug_assert!((bound != 0 && high < bound) || (high == 0));
         high
     }
 
@@ -186,7 +189,8 @@ pub trait Generator {
     ///
     /// let mut rng = new_rng();
     /// for i in 0..=4000 {
-    ///     for _ in 0..(i * 2) {
+    ///     let iters = 64.max(i * 2);
+    ///     for _ in 0..iters {
     ///         assert!(rng.bound_inclusive(i) <= i);
     ///     }
     /// }
@@ -340,6 +344,7 @@ pub trait Generator {
     /// use ya_rand::*;
     ///
     /// const SIZE: usize = 1738;
+    /// const HALF: usize = SIZE / 2;
     /// let mut rng = new_rng();
     /// let mut v = [0; SIZE];
     /// for i in 0..SIZE {
@@ -349,7 +354,6 @@ pub trait Generator {
     /// let random_choice = rng.choice(&v).expect("Vector 'v' is not empty.");
     /// assert!(v.contains(random_choice));
     ///
-    /// const HALF: usize = SIZE / 2;
     /// let random_choice = rng.choice(&v[HALF..]).expect("Still not empty.");
     /// assert!(v[HALF..].contains(random_choice) == true);
     ///
@@ -403,6 +407,9 @@ pub trait Generator {
     }
 
     /// Performs a Fisher-Yates shuffle on the contents of `slice`.
+    ///
+    /// This implementation is the modern variant introduced by Richard Durstenfeld.
+    /// It is in-place and O(n). A slice pointer is used to avoid any bounds checks.
     ///
     /// # Examples
     /// ```

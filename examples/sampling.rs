@@ -1,7 +1,7 @@
 use std::time::Instant;
 use ya_rand::*;
 
-const GYATTS: usize = 1 << 23;
+const GYATTS: usize = 1 << 24;
 
 fn main() {
     let p = core::hint::black_box(0.5);
