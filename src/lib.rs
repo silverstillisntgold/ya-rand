@@ -6,7 +6,8 @@ This crate provides simple and fast pseudo random number generation.
 Glob import the contents of the library and use [`new_rng`] to create new RNGs wherever
 you need them. Then call whatever method you require on that instance.
 
-If you need cryptographic security, enable the **secure** library feature and use [`new_rng_secure`].
+If you need cryptographic security, enable the **secure** library feature and use
+[`new_rng_secure`] instead.
 
 ```
 use ya_rand::*;
@@ -19,6 +20,7 @@ assert!(val < max);
 ```
 
 # Features
+
 * **std** -
     Enabled by default, but can be disabled for compatibility with `no_std` environments.
     Enables normal and exponential distributions, error type conversions
@@ -30,6 +32,9 @@ assert!(val < max);
 * **secure** -
     Enables infrastructure for cryptographically secure random number generation via the
     [`rand_chacha`] crate. Noticeably increases compile time and binary size.
+
+# Details
+
 */
 
 #![no_std]
@@ -153,7 +158,7 @@ mod test {
         let x = 1 << SHIFT;
         let y = x;
         // 2^48 * 2^48 = 2^96
-        let (high, low) = crate::util::wide_mul(x, y);
+        let (high, low) = util::wide_mul(x, y);
         assert!(high == EXPECTED_HIGH);
         assert!(low == EXPECTED_LOW);
     }

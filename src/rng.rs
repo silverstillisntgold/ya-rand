@@ -12,6 +12,7 @@ pub trait SecureGenerator {
     /// to be used in cryptographic contexts.
     ///
     /// # Examples
+    ///
     /// ```
     /// use ya_rand::*;
     ///
@@ -35,6 +36,7 @@ pub trait SeedableGenerator {
     /// implementation of the desired generator.
     ///
     /// # Examples
+    ///
     /// ```
     /// use ya_rand::*;
     ///
@@ -65,6 +67,7 @@ pub trait Generator: Sized {
     /// of calling this function on a specific generator type.
     ///
     /// # Examples
+    ///
     /// ```
     /// use ya_rand::*;
     ///
@@ -120,6 +123,7 @@ pub trait Generator: Sized {
     /// A simple coinflip.
     ///
     /// # Examples
+    ///
     /// ```
     /// use ya_rand::*;
     ///
@@ -149,6 +153,7 @@ pub trait Generator: Sized {
     /// is faster and generates less machine code.
     ///
     /// # Examples
+    ///
     /// ```
     /// use ya_rand::*;
     ///
@@ -184,6 +189,7 @@ pub trait Generator: Sized {
     /// Returns a uniformly distributed u64 in the interval \[0, `bound`\].
     ///
     /// # Examples
+    ///
     /// ```
     /// use ya_rand::*;
     ///
@@ -340,6 +346,7 @@ pub trait Generator: Sized {
     /// `collection` is zero.
     ///
     /// # Examples
+    ///
     /// ```
     /// use ya_rand::*;
     ///
@@ -412,6 +419,7 @@ pub trait Generator: Sized {
     /// It is in-place and O(n). A slice pointer is used to avoid any bounds checks.
     ///
     /// # Examples
+    ///
     /// ```
     /// use ya_rand::*;
     ///

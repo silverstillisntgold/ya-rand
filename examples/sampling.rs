@@ -28,9 +28,8 @@ fn main() {
         );
     }
 
-    let result_basic = basic_time.to_vec().into_iter().sum::<f64>() / (basic_time.len() as f64);
-    let result_advanced =
-        advanced_time.to_vec().into_iter().sum::<f64>() / (advanced_time.len() as f64);
+    let result_basic = basic_time.iter().sum::<f64>() / (basic_time.len() as f64);
+    let result_advanced = advanced_time.iter().sum::<f64>() / (advanced_time.len() as f64);
     println!("basic time: {:.4} seconds", result_basic);
     println!("advanced time: {:.4} seconds", result_advanced);
     println!("speedup: {:.2}", result_basic / result_advanced);
