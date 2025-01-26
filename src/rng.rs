@@ -150,7 +150,7 @@ pub trait Generator: Sized {
     /// Returns a uniformly distributed u64 in the interval [0, `bound`).
     ///
     /// Using [`Generator::bits`] when `bound` happens to be a power of 2
-    /// is faster and generates less machine code.
+    /// is faster and generates less assembly.
     ///
     /// # Examples
     ///
@@ -158,6 +158,8 @@ pub trait Generator: Sized {
     /// use ya_rand::*;
     ///
     /// let mut rng = new_rng();
+    /// // Special case
+    /// assert!(rng.bound(0) == 0);
     /// for i in 1..=4000 {
     ///     let iters = 64.max(i * 2);
     ///     for _ in 0..iters {

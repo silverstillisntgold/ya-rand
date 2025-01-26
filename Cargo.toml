@@ -10,6 +10,9 @@ inline = []
 secure = ["dep:rand_chacha"]
 std = ["getrandom/std", "rand_chacha?/std"]
 
+[package.metadata.docs.rs]
+all-features = true
+
 [dependencies]
 getrandom = "0.3"
 rand_chacha = { version = "=0.9.0-beta.1", default-features = false, optional = true }
@@ -18,3 +21,4 @@ rand_chacha = { version = "=0.9.0-beta.1", default-features = false, optional = 
 fastrand = "2.3"
 rand = "0.8"
 rayon = "1.10"
+tinyrand = "0.5"

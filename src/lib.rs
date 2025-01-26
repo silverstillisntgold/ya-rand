@@ -1,13 +1,32 @@
 /*!
-This crate provides simple and fast pseudo random number generation.
+This crate provides easy and fast pseudo (and sometimes crypto) random number generation.
+
+# But why?
+
+Because [`rand`] is very cool and powerful, but kind of an enormous fucking pain in the ass
+to use, and it's far too large and involved for someone who just a needs to flip a coin once
+every 7 minutes. But if you're doing some crazy black magic computational sorcery, it'll probably
+have something you absolutely need.
+
+Other crates, like [`fastrand`] or [`tinyrand`], fall somewhere between "I'm not sure I trust this
+RNG" to "this API is literally just `rand` but less powerful". I wanted something easy, but also
+fast and reliable.
+
+So here we are.
 
 # Usage
 
 Glob import the contents of the library and use [`new_rng`] to create new RNGs wherever
-you need them. Then call whatever method you require on that instance.
+you need them. Then call whatever method you require on those instances. All methods available
+are directly accessible through any generator instance via the dot operator, and are named
+in a way that should make it easy to quickly identify what you need.
 
 If you need cryptographic security, enable the **secure** library feature and use
 [`new_rng_secure`] instead.
+
+"How do I access the thread-local RNG?" There isn't one, and unless Rust finds a way to significantly
+improve the performance of the TLS implementation, there probably won't ever be. Create a local instance
+when you need one and use it while you need it.
 
 ```
 use ya_rand::*;
@@ -35,18 +54,62 @@ assert!(val < max);
 
 # Details
 
+This crate uses the [xoshiro] family of pseudo-random number generators. These generators are
+very fast (sub-ns when inlined), of [very high statistical quality], and small. They aren't cryptograpically
+secure, but most users don't need their RNG to be secure, they just need it to be random and fast.
+This crate is intended to satisfy those needs, while also being easy to use and simple to understand. It
+also happens to be small and relatively fast to compile.
+
+[xoshiro]: https://prng.di.unimi.it/
+[very high statistical quality]: https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
+
+All generators output a distinct `u64` value on each call, and the various methods used for transforming
+those outputs into more usable forms are all high-quality and well-understood. Placing an upper bound
+on these values uses [Lemire's method]. Doing this inclusively or within a given range are both
+applications of this same method with simple intermediary steps to alter the bound and apply shifts
+when needed. This approach is unbiased and quite fast, but for very large bounds performance might degrade
+slightly, since the algorithm needs to sample the underlying RNG more times to get an unbiased result.
+If you know your bounds ahead of time, passing them as constants can help this issue, since the initial
+division can be done at compile time when the value is known. Even better, if your bound happens to be a
+power of 2, always use [`Generator::bits`], since it's nothing more than a bitshift of the `u64` provided
+by the RNG, and will always be as fast as possible.
+
+Floating point values: TODO
+
+[Lemire's method]: https://arxiv.org/abs/1805.10941
+[Lemire]: https://lemire.me/blog/2017/02/28/how-many-floating-point-numbers-are-in-the-interval-01/
+
+# Security
+
+If you're in the market for secure random number generation, you'll want to enable the **secure**
+feature, which provides [`SecureRng`] and the [`SecureGenerator`] trait. It functions identically to the
+other provided RNGs, but with the addition of [`SecureGenerator::fill_bytes`]. The current implementation
+uses ChaCha with 8 rounds via the [`rand_chacha`] crate. Unfortunately, this crate brings in a million other
+dependencies and completely balloons compile times. In the future I'd like to look into doing a custom
+implementation of ChaCha, but no timeline on that. Why only 8 rounds? Because people who are very
+passionate about cryptography are convinced that's enough, and I have zero reason to doubt them, nor any
+capacity to prove them wrong. See the [top of page 14].
+
+[top of page 14]: https://eprint.iacr.org/2019/1492
+
+# Safety
+
+In the interest of consistent performance, there are no checks performed during runtime in release
+mode. This means there are a couple areas where the end-user is able to receive garbage after providing
+garbage. It is expected of the user to provide reasonable values where there is an input to be given: values
+shouldn't be on the verge of overflow and ranges should always have an end larger than their start.
+There is minimal `unsafe` used, only in areas which directly benefit from it, and they are all one-liners
+which are easily determined to have no ill side-effects.
 */
 
 #![no_std]
 
 mod rng;
 mod util;
-mod xoroshiro128pp;
 mod xoshiro256pp;
 mod xoshiro512pp;
 
 pub use crate::rng::{Generator, SeedableGenerator};
-pub use xoroshiro128pp::Xoroshiro128pp;
 pub use xoshiro256pp::Xoshiro256pp;
 pub use xoshiro512pp::Xoshiro512pp;
 
