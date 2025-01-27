@@ -6,11 +6,11 @@ This crate provides easy and fast pseudo (and sometimes crypto) random number ge
 Because [`rand`] is very cool and powerful, but kind of an enormous fucking pain in the ass
 to use, and it's far too large and involved for someone who just a needs to flip a coin once
 every 7 minutes. But if you're doing some crazy black magic computational sorcery, it'll probably
-have something you absolutely need.
+have something you need to complete your spell.
 
-Other crates, like [`fastrand`] or [`tinyrand`], fall somewhere between "I'm not sure I trust this
-RNG" to "this API is literally just `rand` but less powerful". I wanted something easy, but also
-fast and reliable.
+Other crates, like [`fastrand`] or [`tinyrand`], fall somewhere between "I'm not sure I trust the
+backing RNG" to "this API is literally just `rand` but less powerful". I wanted something easy, but
+also fast and reliable.
 
 So here we are.
 
@@ -74,10 +74,18 @@ division can be done at compile time when the value is known. Even better, if yo
 power of 2, always use [`Generator::bits`], since it's nothing more than a bitshift of the `u64` provided
 by the RNG, and will always be as fast as possible.
 
-Floating point values: TODO
+Floating point values (besides the normal and exponential distributions) are all generated to be uniform,
+with all their values being equidistant within their provided interval. They are **not** maximally dense,
+if that's something you need you'll have to generate those values yourself. This approach is very fast, and
+endorsed by both [Lemire] and [Vigna] (the author of the RNGs used in this crate). The normal distribution
+is generated using the [Marsaglia polar method], so it returns an independant pair of `f64` values.
+Exponential variates are generated using [this approach].
 
 [Lemire's method]: https://arxiv.org/abs/1805.10941
 [Lemire]: https://lemire.me/blog/2017/02/28/how-many-floating-point-numbers-are-in-the-interval-01/
+[Vigna]: https://prng.di.unimi.it/#remarks
+[Marsaglia polar method]: https://en.wikipedia.org/wiki/Marsaglia_polar_method
+[this approach]: https://en.wikipedia.org/wiki/Exponential_distribution#Random_variate_generation
 
 # Security
 
@@ -94,12 +102,12 @@ capacity to prove them wrong. See the [top of page 14].
 
 # Safety
 
-In the interest of consistent performance, there are no checks performed during runtime in release
-mode. This means there are a couple areas where the end-user is able to receive garbage after providing
-garbage. It is expected of the user to provide reasonable values where there is an input to be given: values
-shouldn't be on the verge of overflow and ranges should always have an end larger than their start.
-There is minimal `unsafe` used, only in areas which directly benefit from it, and they are all one-liners
-which are easily determined to have no ill side-effects.
+In the interest of consistent performance and no panics, there are no checks performed during runtime in
+release mode. This means there are a couple areas where the end-user is able to receive garbage after
+providing garbage. It is expected of the user to provide reasonable values where there is an input to be
+given: values shouldn't be on the verge of overflow and ranges should always have an end larger than their
+start. There is minimal `unsafe` used, only in areas which directly benefit from it, and they are all brief
+and easily determined to have no ill side-effects.
 */
 
 #![no_std]

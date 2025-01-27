@@ -8,8 +8,8 @@ const ASCII_CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxy
 
 #[cfg(feature = "secure")]
 pub trait SecureGenerator {
-    /// Fills `dest` with random data, which is safe
-    /// to be used in cryptographic contexts.
+    /// Fills `dest` with random data, which is safe to be used
+    /// in cryptographic contexts.
     ///
     /// # Examples
     ///
@@ -19,7 +19,7 @@ pub trait SecureGenerator {
     /// let mut rng = new_rng_secure();
     /// let mut data = [0; 1738];
     /// rng.fill_bytes(&mut data);
-    /// assert!(data.iter().any(|v| *v != 0));
+    /// assert!(data.into_iter().any(|v| v != 0));
     /// ```
     fn fill_bytes(&mut self, dest: &mut [u8]);
 }
@@ -144,6 +144,7 @@ pub trait Generator: Sized {
     /// ```
     #[inline]
     fn bool(&mut self) -> bool {
+        // Compiles to a single "shr 63" instruction.
         self.bits(1) == 1
     }
 
@@ -438,8 +439,9 @@ pub trait Generator: Sized {
     #[inline(never)]
     fn shuffle<T>(&mut self, slice: &mut [T]) {
         let slice_ptr = slice.as_mut_ptr();
+        let mut j: usize;
         for i in (1..slice.len()).rev() {
-            let j = self.bound_inclusive(i as u64) as usize;
+            j = self.bound_inclusive(i as u64) as usize;
             // SAFETY: Index 'i' will always be in bounds because it's
             // bounded by slice length; index 'j' will always be
             // in bounds because it's bounded by 'i'.

@@ -1,5 +1,5 @@
 use core::{mem::size_of, slice::from_raw_parts_mut};
-use getrandom::{fill as get_random, Error};
+use getrandom::{fill as fill_internal, Error};
 
 /// Creates and returns an array filled with random data from the
 /// output of a SplitMix64 PRNG, which is seeded using `seed`.
@@ -40,10 +40,10 @@ pub fn seeded_state_secure<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
 pub fn fill(dest: &mut [u8]) -> Result<(), Error> {
     if cfg!(all(windows, not(target_vendor = "win7"))) {
         unsafe {
-            get_random(dest).unwrap_unchecked();
+            fill_internal(dest).unwrap_unchecked();
         }
     } else {
-        get_random(dest)?;
+        fill_internal(dest)?;
     }
     Ok(())
 }

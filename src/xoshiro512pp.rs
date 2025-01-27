@@ -1,6 +1,6 @@
 use crate::{
     rng::{Generator, SeedableGenerator},
-    util,
+    util::{seeded_state, seeded_state_secure},
 };
 
 /// Rust implementation of the xoshiro512++ PRNG.
@@ -22,14 +22,14 @@ impl Default for Xoshiro512pp {
 
 impl SeedableGenerator for Xoshiro512pp {
     fn new_with_seed(seed: u64) -> Self {
-        let state = util::seeded_state(seed);
+        let state = seeded_state(seed);
         Self { state }
     }
 }
 
 impl Generator for Xoshiro512pp {
     fn try_new() -> Result<Self, getrandom::Error> {
-        let state = util::seeded_state_secure()?;
+        let state = seeded_state_secure()?;
         Ok(Self { state })
     }
 

@@ -1,7 +1,13 @@
+//! Compares performance of two long-running geometric distributions
+//! with a `p` of 0.5.
+//!
+//! Originally implemented to test an alternative to the `LevelGenerator`
+//! in the [`SkipList`](https://crates.io/crates/skiplist) crate.
+
 use std::time::Instant;
 use ya_rand::*;
 
-const GYATTS: usize = 1 << 24;
+const ITERATIONS: usize = 1 << 24;
 
 fn main() {
     let p = core::hint::black_box(0.5);
@@ -42,10 +48,10 @@ where
     F: FnMut() -> usize,
 {
     core::iter::repeat_with(f)
-        .take(GYATTS)
+        .take(ITERATIONS)
         .map(|v| v as f64)
         .sum::<f64>()
-        / (GYATTS as f64)
+        / (ITERATIONS as f64)
 }
 
 trait LevelGenerator {
