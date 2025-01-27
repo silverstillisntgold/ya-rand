@@ -3,14 +3,14 @@ This crate provides easy and fast pseudo (and sometimes crypto) random number ge
 
 # But why?
 
-Because [`rand`] is very cool and powerful, but kind of an enormous fucking pain in the ass
+Because `rand` is very cool and powerful, but kind of an enormous fucking pain in the ass
 to use, and it's far too large and involved for someone who just a needs to flip a coin once
-every 7 minutes. But if you're doing some crazy black magic computational sorcery, it'll probably
-have something you need to complete your spell.
+every 7 minutes. But if you're doing some crazy black magic computational sorcery, it almost
+certainly has something you can use to complete your spell.
 
-Other crates, like [`fastrand`] or [`tinyrand`], fall somewhere between "I'm not sure I trust the
+Other crates, like `fastrand` or `tinyrand`, fall somewhere between "I'm not sure I trust the
 backing RNG" to "this API is literally just `rand` but less powerful". I wanted something easy, but
-also fast and reliable.
+also fast and robust.
 
 So here we are.
 
@@ -26,7 +26,7 @@ If you need cryptographic security, enable the **secure** library feature and us
 
 "How do I access the thread-local RNG?" There isn't one, and unless Rust finds a way to significantly
 improve the performance of the TLS implementation, there probably won't ever be. Create a local instance
-when you need one and use it while you need it.
+when and where you need one, and use it while you need it.
 
 ```
 use ya_rand::*;

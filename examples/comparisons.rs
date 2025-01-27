@@ -12,10 +12,10 @@ const ITERATIONS: usize = 1 << 24;
 fn main() {
     let mut v = Box::new_uninit_slice(ITERATIONS);
     // Fucking dogshit API what am I looking at
-    let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
+    let mut rng = rand::rngs::StdRng::from_rng(&mut rand::rng());
     let t1 = time_in_nanos(move || {
         v.iter_mut().for_each(|v| {
-            v.write(rng.gen::<u64>());
+            v.write(rng.random::<u64>());
         });
         black_box(v);
     });

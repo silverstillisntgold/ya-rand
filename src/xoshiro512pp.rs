@@ -7,7 +7,7 @@ use crate::{
 /// This generator is fast, high-quality, and small,
 /// but not cryptographically secure.
 ///
-/// More information can be found at: https://prng.di.unimi.it/.
+/// More information can be found at: <https://prng.di.unimi.it/>.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Xoshiro512pp {
     state: [u64; 8],
