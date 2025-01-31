@@ -2,6 +2,9 @@
 name = "ya-rand"
 version = "0.1.0"
 edition = "2021"
+categories = ["algorithms", "no-std"]
+keywords = ["rand", "random", "rng", "chacha", "xoshiro"]
+license = "MIT"
 
 # See crate-level documentation for explanantion of features.
 [features]

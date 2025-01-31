@@ -78,7 +78,7 @@ pub trait Generator: Sized {
     /// // Even more explicit
     /// let mut rng3 = Xoshiro256pp::new();
     /// // Since these are all created using OS entropy, the odds of
-    /// // their states colliding should be vanishingly small.
+    /// // their states colliding will be vanishingly small.
     /// assert!(rng1 != rng2);
     /// assert!(rng1 != rng3);
     /// assert!(rng2 != rng3);
@@ -343,7 +343,7 @@ pub trait Generator: Sized {
         self.f64_exponential() / lambda
     }
 
-    /// Returns a randomly selected item from the iterator of `collection`.
+    /// Returns a randomly chosen item from the iterator of `collection`.
     ///
     /// This method will only return `None` when the length of
     /// `collection` is zero.
@@ -361,10 +361,10 @@ pub trait Generator: Sized {
     ///     v[i] = i;
     /// }
     ///
-    /// let random_choice = rng.choice(&v).expect("Vector 'v' is not empty.");
+    /// let random_choice = rng.choose(&v).expect("Vector 'v' is not empty.");
     /// assert!(v.contains(random_choice));
     ///
-    /// let random_choice = rng.choice(&v[HALF..]).expect("Still not empty.");
+    /// let random_choice = rng.choose(&v[HALF..]).expect("Still not empty.");
     /// assert!(v[HALF..].contains(random_choice) == true);
     ///
     /// // We randomly selected from the top half so we won't find
@@ -372,7 +372,7 @@ pub trait Generator: Sized {
     /// assert!(v[..HALF].contains(random_choice) == false);
     /// ```
     #[inline]
-    fn choice<C>(&mut self, collection: C) -> Option<C::Item>
+    fn choose<C>(&mut self, collection: C) -> Option<C::Item>
     where
         C: IntoIterator,
         C::IntoIter: ExactSizeIterator,
@@ -389,31 +389,31 @@ pub trait Generator: Sized {
     /// Returns a randomly selected ASCII alphabetic character.
     #[inline]
     fn ascii_alphabetic(&mut self) -> char {
-        unsafe { *self.choice(&ASCII_CHARS[..52]).unwrap_unchecked() as char }
+        unsafe { *self.choose(&ASCII_CHARS[..52]).unwrap_unchecked() as char }
     }
 
     /// Returns a randomly selected ASCII uppercase character.
     #[inline]
     fn ascii_uppercase(&mut self) -> char {
-        unsafe { *self.choice(&ASCII_CHARS[..26]).unwrap_unchecked() as char }
+        unsafe { *self.choose(&ASCII_CHARS[..26]).unwrap_unchecked() as char }
     }
 
     /// Returns a randomly selected ASCII lowercase character.
     #[inline]
     fn ascii_lowercase(&mut self) -> char {
-        unsafe { *self.choice(&ASCII_CHARS[26..52]).unwrap_unchecked() as char }
+        unsafe { *self.choose(&ASCII_CHARS[26..52]).unwrap_unchecked() as char }
     }
 
     /// Returns a randomly selected ASCII alphanumeric character.
     #[inline]
     fn ascii_alphanumeric(&mut self) -> char {
-        unsafe { *self.choice(&ASCII_CHARS[..]).unwrap_unchecked() as char }
+        unsafe { *self.choose(&ASCII_CHARS[..]).unwrap_unchecked() as char }
     }
 
     /// Returns a randomly selected ASCII digit character.
     #[inline]
     fn ascii_digit(&mut self) -> char {
-        unsafe { *self.choice(&ASCII_CHARS[52..]).unwrap_unchecked() as char }
+        unsafe { *self.choose(&ASCII_CHARS[52..]).unwrap_unchecked() as char }
     }
 
     /// Performs a Fisher-Yates shuffle on the contents of `slice`.

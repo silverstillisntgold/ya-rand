@@ -8,9 +8,9 @@ to use, and it's far too large and involved for someone who just a needs to flip
 every 7 minutes. But if you're doing some crazy black magic computational sorcery, it almost
 certainly has something you can use to complete your spell.
 
-Other crates, like `fastrand` or `tinyrand`, fall somewhere between "I'm not sure I trust the
+Other crates, like `fastrand`, `tinyrand`, or `oorandom`, fall somewhere between "I'm not sure I trust the
 backing RNG" to "this API is literally just `rand` but less powerful". I wanted something easy, but
-also fast and robust.
+also fast and statistically robust.
 
 So here we are.
 
@@ -43,7 +43,7 @@ assert!(val < max);
 * **std** -
     Enabled by default, but can be disabled for compatibility with `no_std` environments.
     Enables normal and exponential distributions, error type conversions
-    for getrandom, and SIMD optimizations in the rand_chacha crate.
+    for getrandom, and SIMD optimizations in the [`rand_chacha`] crate.
 * **inline** -
     Marks each [`Generator::u64`] implementation with #\[inline\]. Should generally increase
     runtime performance at the cost of binary size and maybe compile time. You'll have
@@ -78,7 +78,7 @@ Floating point values (besides the normal and exponential distributions) are all
 with all their values being equidistant within their provided interval. They are **not** maximally dense,
 if that's something you need you'll have to generate those values yourself. This approach is very fast, and
 endorsed by both [Lemire] and [Vigna] (the author of the RNGs used in this crate). The normal distribution
-is generated using the [Marsaglia polar method], so it returns an independant pair of `f64` values.
+is generated using the [Marsaglia polar method], so it returns a pair of independently sampled `f64` values.
 Exponential variates are generated using [this approach].
 
 [Lemire's method]: https://arxiv.org/abs/1805.10941
@@ -98,14 +98,18 @@ implementation of ChaCha, but no timeline on that. Why only 8 rounds? Because pe
 passionate about cryptography are convinced that's enough, and I have zero reason to doubt them, nor any
 capacity to prove them wrong. See the [top of page 14].
 
+The security promises made to the user are identical to those made by ChaCha as an algorithm; it is up
+to you to determine if it's security guarantees are enough for your use-case given the way you intend
+to use it's generated values.
+
 [top of page 14]: https://eprint.iacr.org/2019/1492
 
 # Safety
 
-In the interest of consistent performance and no panics, there are no checks performed during runtime in
-release mode. This means there are a couple areas where the end-user is able to receive garbage after
-providing garbage. It is expected of the user to provide reasonable values where there is an input to be
-given: values shouldn't be on the verge of overflow and ranges should always have an end larger than their
+In the pursuit of consistent performance and no runtime failures, there are no checks performed during
+runtime in release mode. This means there are a couple areas where the end-user is able to receive garbage
+after providing garbage. It is expected of the user to provide reasonable values where there is an input to
+be given: values shouldn't be on the verge of overflow and ranges should always have an end larger than their
 start. There is minimal `unsafe` used, only in areas which directly benefit from it, and they are all brief
 and easily determined to have no ill side-effects.
 */

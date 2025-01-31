@@ -1,9 +1,9 @@
 use core::{mem::size_of, slice::from_raw_parts_mut};
-use getrandom::{fill as fill_internal, Error};
+use getrandom::{fill, Error};
 
 /// Creates and returns an array filled with random data from the
 /// output of a SplitMix64 PRNG, which is seeded using `seed`.
-pub fn seeded_state<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
+pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
     let mut state = [0; SIZE];
     let mut x = seed;
     // SplitMix64 from https://prng.di.unimi.it/splitmix64.c.
@@ -19,7 +19,7 @@ pub fn seeded_state<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
 
 /// Attempts to create and return an array filled with random
 /// data from operating system entropy.
-pub fn seeded_state_secure<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
+pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
     let mut state = [0; SIZE];
     // SAFETY: I'm over here strokin' my dick
     // I got lotion on my dick right now.
@@ -30,22 +30,6 @@ pub fn seeded_state_secure<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
     };
     fill(state_bytes)?;
     Ok(state)
-}
-
-/// The Windows 10 RNG is infallible, and the [`getrandom`] internals
-/// reflect this since version 0.3.0. But the backend functions aren't
-/// inlined so rustc is unable to eliminate the error branch in user
-/// code; we do it manually here.
-#[inline(always)]
-pub fn fill(dest: &mut [u8]) -> Result<(), Error> {
-    if cfg!(all(windows, not(target_vendor = "win7"))) {
-        unsafe {
-            fill_internal(dest).unwrap_unchecked();
-        }
-    } else {
-        fill_internal(dest)?;
-    }
-    Ok(())
 }
 
 /// Performs 128-bit multiplication on `x` and `y` and returns

@@ -1,5 +1,5 @@
-//! Compares the average performance of alternate RNG crates
-//! When filling a slice with random values.
+//! Compares the performance of alternate RNG crates
+//! when filling a slice with random values.
 
 use core::hint::black_box;
 use rand::{Rng, SeedableRng};
@@ -21,7 +21,7 @@ fn main() {
     });
 
     let mut v = Box::new_uninit_slice(ITERATIONS);
-    let mut rng = fastrand::Rng::new();
+    let mut rng = fastrand::Rng::with_seed(fastrand::u64(..));
     let t2 = time_in_nanos(move || {
         v.iter_mut().for_each(|v| {
             v.write(rng.u64(..));
@@ -71,7 +71,9 @@ fn main() {
     });
 
     println!(
-        "Sequential (local) `rand` average time:     {:>5.2}\n\
+        "Time to fill a slice with {} values (avg per value) in nanoseconds:\n\
+         ----------------------------------------------------------------\n\
+         Sequential (local) `rand` average time:     {:>5.2}\n\
          Sequential (local) `fastrand` average time: {:>5.2}\n\
          Sequential (local) `ya-rand` average time:  {:>5.2} <-- You are here\n\
          \n\
@@ -79,10 +81,10 @@ fn main() {
          Sequential (TLS)   `fastrand` average time: {:>5.2}\n\
          \n\
          Parallel   (TLS)   `rand` average time:     {:>5.2}\n\
-         Parallel   (TLS)   `fastrand` average time: {:>5.2}",
-        t1, t2, t3, t4, t5, t6, t7
+         Parallel   (TLS)   `fastrand` average time: {:>5.2}\n\
+         ----------------------------------------------------------------\n",
+        ITERATIONS, t1, t2, t3, t4, t5, t6, t7
     );
-    println!();
 }
 
 #[inline(never)]

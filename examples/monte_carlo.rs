@@ -1,5 +1,5 @@
 //! Approximation of PI using the monte carlo method,
-//! for both `f32` and `f64`.
+//! for both `f32` and `f64` types.
 
 use core::f32::consts::PI as f32_PI;
 use core::f64::consts::PI as f64_PI;
