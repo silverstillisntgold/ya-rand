@@ -6,8 +6,10 @@ const F64_DIVISOR: f64 = F64_MAX_PRECISE as f64;
 const F32_DIVISOR: f32 = F32_MAX_PRECISE as f32;
 const ASCII_CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
+/// Trait for RNGs which are known to provide streams of
+/// cryptographically secure data.
 #[cfg(feature = "secure")]
-pub trait SecureGenerator {
+pub trait SecureYARandGenerator: YARandGenerator {
     /// Fills `dest` with random data, which is safe to be used
     /// in cryptographic contexts.
     ///
@@ -24,7 +26,8 @@ pub trait SecureGenerator {
     fn fill_bytes(&mut self, dest: &mut [u8]);
 }
 
-pub trait SeedableGenerator {
+/// Trait for RNGs which can be created from a specified seed.
+pub trait SeedableYARandGenerator: YARandGenerator {
     /// Creates a generator from the output of an internal SplitMix64 generator,
     /// which is itself seeded using `seed`.
     ///
@@ -48,7 +51,8 @@ pub trait SeedableGenerator {
     fn new_with_seed(seed: u64) -> Self;
 }
 
-pub trait Generator: Sized {
+/// Base trait that all RNGs must implement.
+pub trait YARandGenerator: Sized {
     /// Creates a generator using randomness provided by the OS.
     ///
     /// Unlike [`Generator::new`], which will panic on failure, `try_new`

@@ -1,4 +1,4 @@
-use crate::rng::{Generator, SecureGenerator};
+use crate::rng::{SecureYARandGenerator, YARandGenerator};
 use core::{mem::size_of, ptr::write_volatile};
 use rand_chacha::{
     rand_core::{RngCore, SeedableRng},
@@ -25,13 +25,13 @@ impl Drop for SecureRng {
     }
 }
 
-impl SecureGenerator for SecureRng {
+impl SecureYARandGenerator for SecureRng {
     fn fill_bytes(&mut self, dest: &mut [u8]) {
         self.internal.fill_bytes(dest);
     }
 }
 
-impl Generator for SecureRng {
+impl YARandGenerator for SecureRng {
     fn try_new() -> Result<Self, getrandom::Error> {
         let mut seed = <ChaCha8Rng as SeedableRng>::Seed::default();
         getrandom::fill(&mut seed)?;

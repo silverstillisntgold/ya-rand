@@ -1,5 +1,5 @@
 use crate::{
-    rng::{Generator, SeedableGenerator},
+    rng::{SeedableYARandGenerator, YARandGenerator},
     util::{state_from_entropy, state_from_seed},
 };
 
@@ -20,14 +20,14 @@ impl Default for Xoshiro256pp {
     }
 }
 
-impl SeedableGenerator for Xoshiro256pp {
+impl SeedableYARandGenerator for Xoshiro256pp {
     fn new_with_seed(seed: u64) -> Self {
         let state = state_from_seed(seed);
         Self { state }
     }
 }
 
-impl Generator for Xoshiro256pp {
+impl YARandGenerator for Xoshiro256pp {
     fn try_new() -> Result<Self, getrandom::Error> {
         let state = state_from_entropy()?;
         Ok(Self { state })

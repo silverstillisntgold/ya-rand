@@ -33,7 +33,7 @@ use ya_rand::*;
 
 let mut rng = new_rng();
 let max: u64 = 69;
-// Yep, that's all there is to it.
+// That's all there is to it.
 let val: u64 = rng.bound(max);
 assert!(val < max);
 ```
@@ -120,7 +120,7 @@ mod util;
 mod xoshiro256pp;
 mod xoshiro512pp;
 
-pub use rng::{Generator, SeedableGenerator};
+pub use rng::{SeedableYARandGenerator, YARandGenerator};
 pub use xoshiro256pp::Xoshiro256pp;
 pub use xoshiro512pp::Xoshiro512pp;
 
@@ -138,7 +138,7 @@ pub fn new_rng() -> ShiroRng {
 #[cfg(feature = "secure")]
 mod secure;
 #[cfg(feature = "secure")]
-pub use rng::SecureGenerator;
+pub use rng::SecureYARandGenerator;
 #[cfg(feature = "secure")]
 pub use secure::SecureRng;
 
