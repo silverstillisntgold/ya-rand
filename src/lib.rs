@@ -1,5 +1,5 @@
 /*!
-This crate provides simple and fast pseudo/crypto random number generation.
+Provides simple and fast pseudo/crypto random number generation.
 
 ## But why?
 
@@ -47,7 +47,7 @@ assert!(val < max);
 * **inline** -
     Marks each [`Generator::u64`] implementation with #\[inline\]. Should generally increase
     runtime performance at the cost of binary size and maybe compile time. You'll have
-    to test your specific use-case to determine how much this feature will impact you.
+    to test your specific use case to determine how much this feature will impact you.
 * **secure** -
     Enables infrastructure for cryptographically secure random number generation via the
     [`rand_chacha`] crate. Noticeably increases compile time and binary size.
@@ -96,13 +96,12 @@ uses ChaCha with 8 rounds via the [`rand_chacha`] crate. Unfortunately, this cra
 dependencies and completely balloons compile times. In the future I'd like to look into doing a custom
 implementation of ChaCha, but no timeline on that. Why only 8 rounds? Because people who are very
 passionate about cryptography are convinced that's enough, and I have zero reason to doubt them, nor any
-capacity to prove them wrong. See the [top of page 14].
+capacity to prove them wrong. See the top of page 14 of the [`Too Much Crypto`] paper.
 
-The security promises made to the user are identical to those made by ChaCha as an algorithm; it is up
-to you to determine if it's security guarantees are enough for your use-case given the way you intend
-to use it's generated values.
+The security promises made to the user are identical to those made by ChaCha as an algorithm. It is up
+to you to determine if those guarantees meet the demands of your use case.
 
-[top of page 14]: https://eprint.iacr.org/2019/1492
+[`Too Much Crypto`]: https://eprint.iacr.org/2019/1492
 
 ## Safety
 
@@ -121,7 +120,7 @@ mod util;
 mod xoshiro256pp;
 mod xoshiro512pp;
 
-pub use crate::rng::{Generator, SeedableGenerator};
+pub use rng::{Generator, SeedableGenerator};
 pub use xoshiro256pp::Xoshiro256pp;
 pub use xoshiro512pp::Xoshiro512pp;
 
