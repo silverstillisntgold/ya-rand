@@ -2,6 +2,9 @@
 name = "ya-rand"
 version = "0.1.0"
 edition = "2021"
+description = "A crate for simple and fast random number generation"
+documentation = "https://docs.rs/ya-rand"
+repository = "https://github.com/silverstillisntgold/ya-rand"
 categories = ["algorithms", "no-std"]
 keywords = ["rand", "random", "rng", "chacha", "xoshiro"]
 license = "MIT"

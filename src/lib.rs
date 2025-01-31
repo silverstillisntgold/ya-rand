@@ -1,7 +1,7 @@
 /*!
-This crate provides easy and fast pseudo (and sometimes crypto) random number generation.
+This crate provides simple and fast pseudo/crypto random number generation.
 
-# But why?
+## But why?
 
 Because `rand` is very cool and powerful, but kind of an enormous fucking pain in the ass
 to use, and it's far too large and involved for someone who just a needs to flip a coin once
@@ -14,7 +14,7 @@ also fast and statistically robust.
 
 So here we are.
 
-# Usage
+## Usage
 
 Glob import the contents of the library and use [`new_rng`] to create new RNGs wherever
 you need them. Then call whatever method you require on those instances. All methods available
@@ -38,7 +38,7 @@ let val: u64 = rng.bound(max);
 assert!(val < max);
 ```
 
-# Features
+## Features
 
 * **std** -
     Enabled by default, but can be disabled for compatibility with `no_std` environments.
@@ -52,7 +52,7 @@ assert!(val < max);
     Enables infrastructure for cryptographically secure random number generation via the
     [`rand_chacha`] crate. Noticeably increases compile time and binary size.
 
-# Details
+## Details
 
 This crate uses the [xoshiro] family of pseudo-random number generators. These generators are
 very fast (sub-ns when inlined), of [very high statistical quality], and small. They aren't cryptograpically
@@ -87,7 +87,7 @@ Exponential variates are generated using [this approach].
 [Marsaglia polar method]: https://en.wikipedia.org/wiki/Marsaglia_polar_method
 [this approach]: https://en.wikipedia.org/wiki/Exponential_distribution#Random_variate_generation
 
-# Security
+## Security
 
 If you're in the market for secure random number generation, you'll want to enable the **secure**
 feature, which provides [`SecureRng`] and the [`SecureGenerator`] trait. It functions identically to the
@@ -104,7 +104,7 @@ to use it's generated values.
 
 [top of page 14]: https://eprint.iacr.org/2019/1492
 
-# Safety
+## Safety
 
 In the pursuit of consistent performance and no runtime failures, there are no checks performed during
 runtime in release mode. This means there are a couple areas where the end-user is able to receive garbage

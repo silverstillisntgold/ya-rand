@@ -42,7 +42,7 @@ fn main() {
     println!();
 }
 
-#[inline(always)]
+#[inline(never)]
 fn avg<F>(f: F) -> f64
 where
     F: FnMut() -> usize,

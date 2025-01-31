@@ -1,2 +1,4 @@
 # ya-rand
- A crate for simple and fast pseudo random number generation
+This crate provides simple and fast pseudo/crypto random number generation.
+
+See https://docs.rs/ya-rand for documentation.
