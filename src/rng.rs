@@ -6,8 +6,7 @@ const F64_DIVISOR: f64 = F64_MAX_PRECISE as f64;
 const F32_DIVISOR: f32 = F32_MAX_PRECISE as f32;
 const ASCII_CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-/// Trait for RNGs which are known to provide streams of
-/// cryptographically secure data.
+/// Trait for RNGs that are known to provide streams of cryptographically secure data.
 #[cfg(feature = "secure")]
 pub trait SecureYARandGenerator: YARandGenerator {
     /// Fills `dest` with random data, which is safe to be used
@@ -26,25 +25,26 @@ pub trait SecureYARandGenerator: YARandGenerator {
     fn fill_bytes(&mut self, dest: &mut [u8]);
 }
 
-/// Trait for RNGs which can be created from a specified seed.
-pub trait SeedableYARandGenerator: YARandGenerator {
+/// Trait for RNGs that can be created from a user-provided seed.
+pub trait SeedableYARandGenerator: YARandGenerator + Default {
     /// Creates a generator from the output of an internal SplitMix64 generator,
-    /// which is itself seeded using `seed`.
+    /// which is itself seeded from `seed`.
     ///
     /// As a rule: unless you are **absolutely certain** that you need to manually
     /// seed a generator, you don't.
     /// Instead, use [`crate::new_rng`] when you need to create a new instance.
     ///
-    /// If you have a scenario where you really need a set seed, prefer to use the `Default`
-    /// implementation of the desired generator.
+    /// If you have a scenario where you really do need a set seed, prefer to use the
+    /// `Default` implementation of the desired generator.
     ///
     /// # Examples
     ///
     /// ```
     /// use ya_rand::*;
     ///
-    /// let mut rng1 = ShiroRng::new_with_seed(0);
-    /// let mut rng2 = ShiroRng::default();
+    /// // In actual use these would be declared `mut`.
+    /// let rng1 = ShiroRng::new_with_seed(0);
+    /// let rng2 = ShiroRng::default();
     /// // Default is just a shortcut for manually seeding with 0.
     /// assert!(rng1 == rng2);
     /// ```
@@ -55,20 +55,29 @@ pub trait SeedableYARandGenerator: YARandGenerator {
 pub trait YARandGenerator: Sized {
     /// Creates a generator using randomness provided by the OS.
     ///
-    /// Unlike [`Generator::new`], which will panic on failure, `try_new`
+    /// Unlike [`YARandGenerator::new`], which will panic on failure, `try_new`
     /// propagates the error-handling responsibility to the user. That being
     /// said, the probability of your operating systems RNG failing is absurdly
     /// low. And in the case that is does fail, that's not really an issue
     /// most users are going to be able to address.
     ///
-    /// Stick to using [`crate::new_rng`], unless you **need** a generator of a
-    /// different type (and you probably don't), then use `new` on your desired type.
+    /// Stick to using [`crate::new_rng`], unless you really need a generator of a
+    /// different type (you probably don't), then use `new` on your desired type.
     fn try_new() -> Result<Self, getrandom::Error>;
 
     /// Creates a generator using randomness provided by the OS.
     ///
     /// It is recommended to instead use the top-level [`crate::new_rng`] instead
     /// of calling this function on a specific generator type.
+    ///
+    /// # Safety
+    ///
+    /// This function will panic if your OS rng fails to provide enough entropy.
+    /// But this is extremely unlikely, and unless you're working at the kernel level, it's
+    /// not something you should ever be concerned with.
+    ///
+    /// On Windows 10 and above this function is infallible, since modern Windows has
+    /// adopted a user-space cryptographic architecture that can't fail at runtime.
     ///
     /// # Examples
     ///
@@ -82,7 +91,7 @@ pub trait YARandGenerator: Sized {
     /// // Even more explicit
     /// let mut rng3 = Xoshiro256pp::new();
     /// // Since these are all created using OS entropy, the odds of
-    /// // their states colliding will be vanishingly small.
+    /// // their initial states colliding is vanishingly small.
     /// assert!(rng1 != rng2);
     /// assert!(rng1 != rng3);
     /// assert!(rng2 != rng3);
@@ -154,7 +163,7 @@ pub trait YARandGenerator: Sized {
 
     /// Returns a uniformly distributed u64 in the interval [0, `bound`).
     ///
-    /// Using [`Generator::bits`] when `bound` happens to be a power of 2
+    /// Using [`YARandGenerator::bits`] when `bound` happens to be a power of 2
     /// is faster and generates less assembly.
     ///
     /// # Examples
@@ -174,15 +183,12 @@ pub trait YARandGenerator: Sized {
     /// ```
     #[inline]
     fn bound(&mut self, bound: u64) -> u64 {
+        // Lemire's method: https://arxiv.org/abs/1805.10941.
         use crate::util::wide_mul;
         let (mut high, mut low) = wide_mul(self.u64(), bound);
-        // Will nearly always be false when `bound` isn't close to u64::MAX.
         match low < bound {
             false => {}
             true => {
-                // Can actually be a pretty cheap failure branch, since
-                // rustc can compute `threshold` at compile time when `bound`
-                // is a constant.
                 let threshold = bound.wrapping_neg() % bound;
                 while low < threshold {
                     (high, low) = wide_mul(self.u64(), bound);
@@ -422,8 +428,11 @@ pub trait YARandGenerator: Sized {
 
     /// Performs a Fisher-Yates shuffle on the contents of `slice`.
     ///
-    /// This implementation is the modern variant introduced by Richard Durstenfeld.
-    /// It is in-place and O(n). A slice pointer is used to avoid any bounds checks.
+    /// This implementation is the [modern variant] introduced by
+    /// Richard Durstenfeld. It is in-place and O(n).
+    ///
+    /// [modern variant]:
+    /// https://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm
     ///
     /// # Examples
     ///
@@ -443,9 +452,8 @@ pub trait YARandGenerator: Sized {
     #[inline(never)]
     fn shuffle<T>(&mut self, slice: &mut [T]) {
         let slice_ptr = slice.as_mut_ptr();
-        let mut j: usize;
         for i in (1..slice.len()).rev() {
-            j = self.bound_inclusive(i as u64) as usize;
+            let j = self.bound_inclusive(i as u64) as usize;
             // SAFETY: Index 'i' will always be in bounds because it's
             // bounded by slice length; index 'j' will always be
             // in bounds because it's bounded by 'i'.

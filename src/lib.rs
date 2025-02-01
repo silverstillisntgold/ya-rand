@@ -1,4 +1,6 @@
 /*!
+# YA-Rand: Yet Another Rand
+
 Provides simple and fast pseudo/crypto random number generation.
 
 ## But why?
@@ -45,7 +47,7 @@ assert!(val < max);
     Enables normal and exponential distributions, error type conversions
     for getrandom, and SIMD optimizations in the [`rand_chacha`] crate.
 * **inline** -
-    Marks each [`Generator::u64`] implementation with #\[inline\]. Should generally increase
+    Marks each [`YARandGenerator::u64`] implementation with #\[inline\]. Should generally increase
     runtime performance at the cost of binary size and maybe compile time. You'll have
     to test your specific use case to determine how much this feature will impact you.
 * **secure** -
@@ -71,8 +73,8 @@ when needed. This approach is unbiased and quite fast, but for very large bounds
 slightly, since the algorithm needs to sample the underlying RNG more times to get an unbiased result.
 If you know your bounds ahead of time, passing them as constants can help this issue, since the initial
 division can be done at compile time when the value is known. Even better, if your bound happens to be a
-power of 2, always use [`Generator::bits`], since it's nothing more than a bitshift of the `u64` provided
-by the RNG, and will always be as fast as possible.
+power of 2, always use [`YARandGenerator::bits`], since it's nothing more than a bitshift of the `u64`
+provided by the RNG, and will always be as fast as possible.
 
 Floating point values (besides the normal and exponential distributions) are all generated to be uniform,
 with all their values being equidistant within their provided interval. They are **not** maximally dense,
@@ -90,13 +92,13 @@ Exponential variates are generated using [this approach].
 ## Security
 
 If you're in the market for secure random number generation, you'll want to enable the **secure**
-feature, which provides [`SecureRng`] and the [`SecureGenerator`] trait. It functions identically to the
-other provided RNGs, but with the addition of [`SecureGenerator::fill_bytes`]. The current implementation
-uses ChaCha with 8 rounds via the [`rand_chacha`] crate. Unfortunately, this crate brings in a million other
-dependencies and completely balloons compile times. In the future I'd like to look into doing a custom
-implementation of ChaCha, but no timeline on that. Why only 8 rounds? Because people who are very
-passionate about cryptography are convinced that's enough, and I have zero reason to doubt them, nor any
-capacity to prove them wrong. See the top of page 14 of the [`Too Much Crypto`] paper.
+feature, which provides [`SecureRng`] and the [`SecureYARandGenerator`] trait. It functions identically to
+the other provided RNGs, but with the addition of [`SecureYARandGenerator::fill_bytes`]. The current
+implementation uses ChaCha with 8 rounds via the [`rand_chacha`] crate. Unfortunately, this crate brings
+in a million other dependencies and completely balloons compile times. In the future I'd like to look into
+doing a custom implementation of ChaCha, but no timeline on that. Why only 8 rounds? Because people who are
+very passionate about cryptography are convinced that's enough, and I have zero reason to doubt them, nor
+any capacity to prove them wrong. See the top of page 14 of the [`Too Much Crypto`] paper.
 
 The security promises made to the user are identical to those made by ChaCha as an algorithm. It is up
 to you to determine if those guarantees meet the demands of your use case.

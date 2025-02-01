@@ -1,4 +1,5 @@
-# ya-rand
+# YA-Rand: Yet Another Rand
+
 Provides simple and fast pseudo/crypto random number generation.
 
 ## Usage
