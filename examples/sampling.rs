@@ -1,16 +1,18 @@
 //! Compares performance of two long-running geometric distributions
-//! with a `p` of 0.5.
+//! with a `p` value of 0.5.
 //!
 //! Originally implemented to test an alternative to the `LevelGenerator`
 //! in the [`SkipList`](https://crates.io/crates/skiplist) crate.
 
+use std::hint::black_box;
+use std::iter;
 use std::time::Instant;
 use ya_rand::*;
 
 const ITERATIONS: usize = 1 << 24;
 
 fn main() {
-    let p = core::hint::black_box(0.5);
+    let p = black_box(0.5);
     let mut basic_time = Vec::with_capacity(420);
     let mut advanced_time = Vec::with_capacity(420);
     for i in 16..=32 {
@@ -47,7 +49,7 @@ fn avg<F>(f: F) -> f64
 where
     F: FnMut() -> usize,
 {
-    core::iter::repeat_with(f)
+    iter::repeat_with(f)
         .take(ITERATIONS)
         .map(|v| v as f64)
         .sum::<f64>()
@@ -106,7 +108,8 @@ impl Advanced {
 
 impl LevelGenerator for Advanced {
     fn random(&mut self) -> usize {
-        let height = self.rng.u64().trailing_ones() as usize;
+        // Number of failures before success
+        let height = self.rng.u64().trailing_zeros() as usize;
         height.min(self.total - 1)
     }
 }

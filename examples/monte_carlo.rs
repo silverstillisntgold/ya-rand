@@ -1,8 +1,8 @@
 //! Approximation of PI using the monte carlo method,
 //! for both `f32` and `f64` types.
 
-use core::f32::consts::PI as f32_PI;
-use core::f64::consts::PI as f64_PI;
+use std::f32::consts::PI as f32_PI;
+use std::f64::consts::PI as f64_PI;
 use ya_rand::*;
 
 const ITERATIONS: u64 = 1 << 24;
@@ -22,7 +22,7 @@ fn test_f32(rng: &mut ShiroRng) {
         let x = rng.f32();
         let y = rng.f32();
         let distance = (x * x) + (y * y);
-        if distance < 1.0 {
+        if distance <= 1.0 {
             in_circle += 1;
         }
     }
@@ -42,7 +42,7 @@ fn test_f64(rng: &mut ShiroRng) {
         let x = rng.f64();
         let y = rng.f64();
         let distance = (x * x) + (y * y);
-        if distance < 1.0 {
+        if distance <= 1.0 {
             in_circle += 1;
         }
     }

@@ -1,9 +1,9 @@
 //! Compares the performance of alternate RNG crates
 //! when filling a slice with random values.
 
-use core::hint::black_box;
-use rand::{Rng, SeedableRng};
+use rand::{rngs, Rng, SeedableRng};
 use rayon::prelude::*;
+use std::hint::black_box;
 use std::time::Instant;
 use ya_rand::*;
 
@@ -11,7 +11,7 @@ const ITERATIONS: usize = 1 << 24;
 
 fn main() {
     let mut v = Box::new_uninit_slice(ITERATIONS);
-    let mut rng = rand::rngs::StdRng::from_rng(&mut rand::rng());
+    let mut rng = rngs::StdRng::from_rng(&mut rand::rng());
     let t1 = time_in_nanos(move || {
         v.iter_mut().for_each(|v| {
             v.write(rng.random::<u64>());
