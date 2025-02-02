@@ -67,7 +67,7 @@ pub trait YARandGenerator: Sized {
 
     /// Creates a generator using randomness provided by the OS.
     ///
-    /// It is recommended to instead use the top-level [`crate::new_rng`] instead
+    /// It is recommended to use the top-level [`crate::new_rng`] instead
     /// of calling this function on a specific generator type.
     ///
     /// # Safety
@@ -76,8 +76,8 @@ pub trait YARandGenerator: Sized {
     /// But this is extremely unlikely, and unless you're working at the kernel level, it's
     /// not something you should ever be concerned with.
     ///
-    /// On Windows 10 and above this function is infallible, since modern Windows has
-    /// adopted a user-space cryptographic architecture that can't fail at runtime.
+    /// Since Windows 10 this function is infallible, since modern Windows has adopted
+    /// a user-space cryptographic architecture that can't fail during runtime.
     ///
     /// # Examples
     ///
@@ -172,7 +172,7 @@ pub trait YARandGenerator: Sized {
     /// use ya_rand::*;
     ///
     /// let mut rng = new_rng();
-    /// // Special case
+    /// // Bound of 0 always returns 0.
     /// assert!(rng.bound(0) == 0);
     /// for i in 1..=4000 {
     ///     let iters = 64.max(i * 2);
@@ -195,7 +195,7 @@ pub trait YARandGenerator: Sized {
                 }
             }
         }
-        debug_assert!((bound != 0 && high < bound) || (high == 0));
+        debug_assert!((bound != 0 && high < bound) || high == 0);
         high
     }
 
