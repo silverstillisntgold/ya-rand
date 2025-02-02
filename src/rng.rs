@@ -127,13 +127,10 @@ pub trait YARandGenerator: Sized {
     /// Returns a uniformly distributed u64 in the interval [0, 2<sup>`bit_count`</sup>).
     #[inline]
     fn bits(&mut self, bit_count: u32) -> u64 {
-        debug_assert!(bit_count <= u64::BITS);
-        self.u64() >> (u64::BITS - bit_count)
+        self.u64() >> (u64::BITS - bit_count.min(u64::BITS))
     }
 
-    /// Returns a bool with 50% odds of being true.
-    ///
-    /// A simple coinflip.
+    /// A simple coinflip, returning a bool which has a 50% chance of being true.
     ///
     /// # Examples
     ///
@@ -142,18 +139,18 @@ pub trait YARandGenerator: Sized {
     ///
     /// const ITER_COUNT: u64 = 1 << 24;
     /// let mut rng = new_rng();
-    /// let mut ones: u64 = 0;
-    /// let mut zeroes: u64 = 0;
+    /// let mut yes: u64 = 0;
+    /// let mut no: u64 = 0;
     /// for _ in 0..ITER_COUNT {
     ///     if rng.bool() {
-    ///         ones += 1;
+    ///         yes += 1;
     ///     } else {
-    ///         zeroes += 1;
+    ///         no += 1;
     ///     }
     /// }
     /// // We expect the difference to be within ~5%.
     /// let THRESHOLD: u64 = ITER_COUNT / 20;
-    /// assert!(ones.abs_diff(zeroes) <= THRESHOLD);
+    /// assert!(yes.abs_diff(no) <= THRESHOLD);
     /// ```
     #[inline]
     fn bool(&mut self) -> bool {
@@ -175,8 +172,8 @@ pub trait YARandGenerator: Sized {
     /// // Bound of 0 always returns 0.
     /// assert!(rng.bound(0) == 0);
     /// for i in 1..=4000 {
-    ///     let iters = 64.max(i * 2);
-    ///     for _ in 0..iters {
+    ///     let iterations = 64.max(i * 2);
+    ///     for _ in 0..iterations {
     ///         assert!(rng.bound(i) < i);
     ///     }
     /// }
@@ -208,8 +205,8 @@ pub trait YARandGenerator: Sized {
     ///
     /// let mut rng = new_rng();
     /// for i in 0..=4000 {
-    ///     let iters = 64.max(i * 2);
-    ///     for _ in 0..iters {
+    ///     let iterations = 64.max(i * 2);
+    ///     for _ in 0..iterations {
     ///         assert!(rng.bound_inclusive(i) <= i);
     ///     }
     /// }
@@ -316,7 +313,8 @@ pub trait YARandGenerator: Sized {
             x = self.f64_wide();
             y = self.f64_wide();
             s = (x * x) + (y * y);
-            // Reroll if s does not lie within the unit circle
+            // Reroll if s does not lie within the unit circle.
+            // Exclude 1 because that would return (0.0, 0.0).
             match s < 1.0 && s != 0.0 {
                 true => break,
                 false => {}

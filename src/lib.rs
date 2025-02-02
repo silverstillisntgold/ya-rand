@@ -45,7 +45,8 @@ assert!(val < max);
 let val = rng.f64();
 assert!(0.0 <= val && val < 1.0);
 
-// Generate a random ascii digit
+// Generate a random ascii digit:
+// '0' - '9' as a utf-8 character
 let digit = rng.ascii_digit();
 assert!(digit.is_ascii_digit());
 ```
@@ -116,6 +117,10 @@ to you to determine if those guarantees meet the demands of your use case.
 [`Too Much Crypto`]: https://eprint.iacr.org/2019/1492
 
 ## Safety
+
+Generators are seeded using entropy from the underlying OS, and have the *potential* to fail during creation.
+But in practice this is extraordinarily unlikely, and isn't something the end-user should ever worry about.
+Windows 10 and newer will never fail. This is also mentioned in the docs of [`YARandGenerator::new`].
 
 In the pursuit of consistent performance and no runtime failures, there are no checks performed during
 runtime in release mode. This means there are a couple areas where the end-user is able to receive garbage

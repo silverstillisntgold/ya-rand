@@ -19,9 +19,10 @@ assert!(val < max);
 let val = rng.f64();
 assert!(0.0 <= val && val < 1.0);
 
-// Generate a random ascii digit
+// Generate a random ascii digit:
+// '0' - '9' as a utf-8 character
 let digit = rng.ascii_digit();
 assert!(digit.is_ascii_digit());
 ```
 
-See https://docs.rs/ya-rand for documentation.
+See https://docs.rs/ya-rand for full documentation.
