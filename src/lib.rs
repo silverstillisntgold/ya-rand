@@ -36,14 +36,14 @@ use ya_rand::*;
 
 // **Correct** instantiation is easy.
 // This seeds the RNG using operating system entropy,
-// meaning you never have to worry about the quality
-// of the initial state of RNG instances.
+// so you never have to worry about the quality of the
+// initial state of RNG instances.
 let mut rng = new_rng();
 
 // Generate a random number with a given upper bound
-let bound: u64 = 69;
-let val = rng.bound(bound);
-assert!(val < bound);
+let max: u64 = 69;
+let val = rng.bound(max);
+assert!(val < max);
 
 // Generate a random number in a given range
 let min: i64 = 69;

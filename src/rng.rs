@@ -158,9 +158,9 @@ pub trait YARandGenerator: Sized {
         self.bits(1) == 1
     }
 
-    /// Returns a uniformly distributed u64 in the interval [0, `bound`).
+    /// Returns a uniformly distributed u64 in the interval [0, `max`).
     ///
-    /// Using [`YARandGenerator::bits`] when `bound` happens to be a power of 2
+    /// Using [`YARandGenerator::bits`] when `max` happens to be a power of 2
     /// is faster and generates less assembly.
     ///
     /// # Examples
@@ -171,32 +171,31 @@ pub trait YARandGenerator: Sized {
     /// let mut rng = new_rng();
     /// // Bound of 0 always returns 0.
     /// assert!(rng.bound(0) == 0);
-    /// for i in 1..=4000 {
-    ///     let iterations = 64.max(i * 2);
-    ///     for _ in 0..iterations {
+    /// for i in 1..=2000 {
+    ///     for _ in 0..(i * 2) {
     ///         assert!(rng.bound(i) < i);
     ///     }
     /// }
     /// ```
     #[inline]
-    fn bound(&mut self, bound: u64) -> u64 {
+    fn bound(&mut self, max: u64) -> u64 {
         // Lemire's method: https://arxiv.org/abs/1805.10941.
         use crate::util::wide_mul;
-        let (mut high, mut low) = wide_mul(self.u64(), bound);
-        match low < bound {
+        let (mut high, mut low) = wide_mul(self.u64(), max);
+        match low < max {
             false => {}
             true => {
-                let threshold = bound.wrapping_neg() % bound;
+                let threshold = max.wrapping_neg() % max;
                 while low < threshold {
-                    (high, low) = wide_mul(self.u64(), bound);
+                    (high, low) = wide_mul(self.u64(), max);
                 }
             }
         }
-        debug_assert!((bound != 0 && high < bound) || high == 0);
+        debug_assert!((max != 0 && high < max) || high == 0);
         high
     }
 
-    /// Returns a uniformly distributed u64 in the interval \[0, `bound`\].
+    /// Returns a uniformly distributed u64 in the interval \[0, `max`\].
     ///
     /// # Examples
     ///
@@ -204,16 +203,15 @@ pub trait YARandGenerator: Sized {
     /// use ya_rand::*;
     ///
     /// let mut rng = new_rng();
-    /// for i in 0..=4000 {
-    ///     let iterations = 64.max(i * 2);
-    ///     for _ in 0..iterations {
+    /// for i in 0..=2000 {
+    ///     for _ in 0..(i * 2) {
     ///         assert!(rng.bound_inclusive(i) <= i);
     ///     }
     /// }
     /// ```
     #[inline]
-    fn bound_inclusive(&mut self, bound: u64) -> u64 {
-        self.bound(bound + 1)
+    fn bound_inclusive(&mut self, max: u64) -> u64 {
+        self.bound(max + 1)
     }
 
     /// Returns a uniformly distributed i64 in the interval [`min`, `max`)
