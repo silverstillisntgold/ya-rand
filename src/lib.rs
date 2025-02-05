@@ -65,15 +65,14 @@ assert!(digit.is_ascii_digit());
 
 * **std** -
     Enabled by default, but can be disabled for compatibility with `no_std` environments.
-    Enables normal and exponential distributions, error type conversions
-    for getrandom, and SIMD optimizations in the [`rand_chacha`] crate.
+    Enables normal/exponential distributions and error type conversions for getrandom.
 * **inline** -
     Marks each [`YARandGenerator::u64`] implementation with #\[inline\]. Should generally increase
     runtime performance at the cost of binary size and maybe compile time. You'll have
     to test your specific use case to determine how much this feature will impact you.
 * **secure** -
     Enables infrastructure for cryptographically secure random number generation via the
-    [`rand_chacha`] crate. Noticeably increases compile time and binary size.
+    [`chacha20`] crate. Moderately increases compile time and binary size.
 
 ## Details
 
