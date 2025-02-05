@@ -12,7 +12,7 @@ const ITERATIONS: usize = 1 << 24;
 fn main() {
     let mut v = Box::new_uninit_slice(ITERATIONS);
     let mut rng = rngs::StdRng::from_rng(&mut rand::rng());
-    let t1 = time_in_nanos(move || {
+    let sequential_local_rand = time_in_nanos(move || {
         v.iter_mut().for_each(|v| {
             v.write(rng.random::<u64>());
         });
@@ -21,7 +21,7 @@ fn main() {
 
     let mut v = Box::new_uninit_slice(ITERATIONS);
     let mut rng = fastrand::Rng::with_seed(fastrand::u64(..));
-    let t2 = time_in_nanos(move || {
+    let sequential_local_fastrand = time_in_nanos(move || {
         v.iter_mut().for_each(|v| {
             v.write(rng.u64(..));
         });
@@ -30,7 +30,7 @@ fn main() {
 
     let mut v = Box::new_uninit_slice(ITERATIONS);
     let mut rng = new_rng();
-    let t3 = time_in_nanos(move || {
+    let sequential_local_yarand = time_in_nanos(move || {
         v.iter_mut().for_each(|v| {
             v.write(rng.u64());
         });
@@ -38,7 +38,16 @@ fn main() {
     });
 
     let mut v = Box::new_uninit_slice(ITERATIONS);
-    let t4 = time_in_nanos(move || {
+    let mut rng = oorandom::Rand64::new(rand::random());
+    let sequential_local_oorand = time_in_nanos(move || {
+        v.iter_mut().for_each(|v| {
+            v.write(rng.rand_u64());
+        });
+        black_box(v);
+    });
+
+    let mut v = Box::new_uninit_slice(ITERATIONS);
+    let sequential_tls_rand = time_in_nanos(move || {
         v.iter_mut().for_each(|v| {
             v.write(rand::random::<u64>());
         });
@@ -46,7 +55,7 @@ fn main() {
     });
 
     let mut v = Box::new_uninit_slice(ITERATIONS);
-    let t5 = time_in_nanos(move || {
+    let sequential_tls_fastrand = time_in_nanos(move || {
         v.iter_mut().for_each(|v| {
             v.write(fastrand::u64(..));
         });
@@ -54,7 +63,7 @@ fn main() {
     });
 
     let mut v = Box::new_uninit_slice(ITERATIONS);
-    let t6 = time_in_nanos(move || {
+    let parallel_tls_rand = time_in_nanos(move || {
         v.par_iter_mut().for_each(|v| {
             v.write(rand::random::<u64>());
         });
@@ -62,7 +71,7 @@ fn main() {
     });
 
     let mut v = Box::new_uninit_slice(ITERATIONS);
-    let t7 = time_in_nanos(move || {
+    let parallel_tls_fastrand = time_in_nanos(move || {
         v.par_iter_mut().for_each(|v| {
             v.write(fastrand::u64(..));
         });
@@ -70,19 +79,28 @@ fn main() {
     });
 
     println!(
-        "Time to fill a slice with {} values (avg per value) in nanoseconds:\n\
+        "Filling a slice with {} values - Average time per value in nanoseconds:\n\
          ----------------------------------------------------------------\n\
          Sequential (local) `rand` average time:     {:>5.2}\n\
          Sequential (local) `fastrand` average time: {:>5.2}\n\
          Sequential (local) `ya-rand` average time:  {:>5.2} <-- You are here\n\
+         Sequential (local) `oorandom` average time: {:>5.2}\n\
          \n\
-         Sequential (TLS)   `rand` average time:     {:>5.2}\n\
+         Sequential (TLS)   `rand` average time:     {:>5.2} <-- How most people use `rand`\n\
          Sequential (TLS)   `fastrand` average time: {:>5.2}\n\
          \n\
          Parallel   (TLS)   `rand` average time:     {:>5.2}\n\
          Parallel   (TLS)   `fastrand` average time: {:>5.2}\n\
          ----------------------------------------------------------------\n",
-        ITERATIONS, t1, t2, t3, t4, t5, t6, t7
+        ITERATIONS,
+        sequential_local_rand,
+        sequential_local_fastrand,
+        sequential_local_yarand,
+        sequential_local_oorand,
+        sequential_tls_rand,
+        sequential_tls_fastrand,
+        parallel_tls_rand,
+        parallel_tls_fastrand
     );
 }
 

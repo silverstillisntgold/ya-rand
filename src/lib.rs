@@ -12,8 +12,8 @@ certainly has something you can use to complete your spell.
 
 Other crates, like `fastrand`, `tinyrand`, or `oorandom`, fall somewhere between "I'm not sure I trust the
 backing RNG" to "this API is literally just `rand` but less powerful". Meaning their state size (how many
-internal bits they hold) is too small for comfort, or they lean into having an idiomatic Rust API instead
-of being straightforward to use. I wanted something easy, but also fast and statistically robust.
+internal bits they hold) is too small for comfort, or they lean into having a properly idiomatic Rust API
+instead of being straightforward to use. I wanted something easy, but also fast and statistically robust.
 
 So here we are.
 
@@ -29,7 +29,9 @@ If you need cryptographic security, enable the **secure** library feature and us
 
 "How do I access the thread-local RNG?" There isn't one, and unless Rust improves the performance and
 ergonomics of the TLS implementation, there probably won't ever be. Create a local instance when and
-where you need one and use it while you need it.
+where you need one and use it while you need it. If you need an RNG to stick around for awhile, passing
+it between functions or storing it in structs is a perfectly valid solution. The default RNG is only 32
+bytes, so it shouldn't balloon your memory footprint or the size of your code.
 
 ```
 use ya_rand::*;
