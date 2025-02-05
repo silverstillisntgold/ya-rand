@@ -11,8 +11,9 @@ every 7 minutes. But if you're doing some crazy black magic computational sorcer
 certainly has something you can use to complete your spell.
 
 Other crates, like `fastrand`, `tinyrand`, or `oorandom`, fall somewhere between "I'm not sure I trust the
-backing RNG" to "this API is literally just `rand` but less powerful". I wanted something easy, but
-also fast and statistically robust.
+backing RNG" to "this API is literally just `rand` but less powerful". Meaning their state size (how many
+internal bits they hold) is too small for comfort, or they lean into having an idiomatic Rust API instead
+of being straightforward to use. I wanted something easy, but also fast and statistically robust.
 
 So here we are.
 
@@ -26,20 +27,29 @@ in a way that should make it easy to quickly identify what you need.
 If you need cryptographic security, enable the **secure** library feature and use
 [`new_rng_secure`] instead.
 
-"How do I access the thread-local RNG?" There isn't one, and unless Rust finds a way to significantly
-improve the performance of the TLS implementation, there probably won't ever be. Create a local instance
-when and where you need one, and use it while you need it.
+"How do I access the thread-local RNG?" There isn't one, and unless Rust improves the performance and
+ergonomics of the TLS implementation, there probably won't ever be. Create a local instance when and
+where you need one and use it while you need it.
 
 ```
 use ya_rand::*;
 
-// Instantiation is that easy
+// **Correct** instantiation is easy.
+// This seeds the RNG using operating system entropy,
+// meaning you never have to worry about the quality
+// of the initial state of RNG instances.
 let mut rng = new_rng();
 
-// Generate a bounded random number
-let max: u64 = 69;
-let val = rng.bound(max);
-assert!(val < max);
+// Generate a random number with a given upper bound
+let bound: u64 = 69;
+let val = rng.bound(bound);
+assert!(val < bound);
+
+// Generate a random number in a given range
+let min: i64 = 69;
+let max: i64 = 420;
+let val = rng.range(min, max);
+assert!(min <= val && val < max);
 
 // Generate a random floating point value
 let val = rng.f64();
@@ -105,8 +115,7 @@ Exponential variates are generated using [this approach].
 If you're in the market for secure random number generation, you'll want to enable the **secure**
 feature, which provides [`SecureRng`] and the [`SecureYARandGenerator`] trait. It functions identically to
 the other provided RNGs, but with the addition of [`SecureYARandGenerator::fill_bytes`]. The current
-implementation uses ChaCha with 8 rounds via the [`rand_chacha`] crate. Unfortunately, this crate brings
-in a million other dependencies and completely balloons compile times. In the future I'd like to look into
+implementation uses ChaCha with 8 rounds via the [`chacha20`] crate. In the future I'd like to look into
 doing a custom implementation of ChaCha, but no timeline on that. Why only 8 rounds? Because people who are
 very passionate about cryptography are convinced that's enough, and I have zero reason to doubt them, nor
 any capacity to prove them wrong. See the top of page 14 of the [`Too Much Crypto`] paper.

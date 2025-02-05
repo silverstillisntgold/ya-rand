@@ -7,13 +7,22 @@ Provides simple and fast pseudo/crypto random number generation.
 ```rust
 use ya_rand::*;
 
-// Instantiation is that easy
+// **Correct** instantiation is easy.
+// This seeds the RNG using operating system entropy,
+// meaning you never have to worry about the quality
+// of the initial state of RNG instances.
 let mut rng = new_rng();
 
-// Generate a bounded random number
-let max: u64 = 69;
-let val = rng.bound(max);
-assert!(val < max);
+// Generate a random number with a given upper bound
+let bound: u64 = 69;
+let val = rng.bound(bound);
+assert!(val < bound);
+
+// Generate a random number in a given range
+let min: i64 = 69;
+let max: i64 = 420;
+let val = rng.range(min, max);
+assert!(min <= val && val < max);
 
 // Generate a random floating point value
 let val = rng.f64();

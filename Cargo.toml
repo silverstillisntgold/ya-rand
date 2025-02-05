@@ -13,16 +13,18 @@ license = "MIT"
 [features]
 default = ["std"]
 inline = []
-secure = ["dep:rand_chacha"]
-std = ["getrandom/std", "rand_chacha?/std"]
+secure = ["dep:chacha20"]
+std = ["getrandom/std"]
 
 [package.metadata.docs.rs]
 all-features = true
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+chacha20 = { version = "=0.10.0-pre.3", default-features = false, optional = true, features = [
+    "rng",
+] }
 getrandom = "0.3"
-rand_chacha = { version = "0.9", default-features = false, optional = true }
 
 [dev-dependencies]
 fastrand = "2.3"

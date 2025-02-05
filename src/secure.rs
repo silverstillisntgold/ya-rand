@@ -1,25 +1,32 @@
 use crate::rng::{SecureYARandGenerator, YARandGenerator};
-use core::{mem::size_of, ptr::write_volatile};
-use rand_chacha::{
+use chacha20::{
     rand_core::{RngCore, SeedableRng},
     ChaCha8Rng,
 };
+use core::{mem::size_of, ptr::write};
 
 /// A cryptographically secure random number generator.
 ///
 /// The current implementation is ChaCha with 8 rounds,
-/// as supplied by the [`rand_chacha`] crate.
+/// as supplied by the [`chacha20`] crate.
 #[derive(Debug)]
 pub struct SecureRng {
     internal: ChaCha8Rng,
 }
 
 impl Drop for SecureRng {
+    #[inline(never)]
     fn drop(&mut self) {
         let self_ptr = (self as *mut Self).cast::<u8>();
         for i in 0..size_of::<SecureRng>() {
             unsafe {
-                write_volatile(self_ptr.add(i), 0);
+                // Zeroize uses `write_volatile` because it needs to
+                // be generic and might be used for zeroing any kind of
+                // memory, but we own this type and know it's layout (integer data),
+                // so using `write` and preventing inlining allows the
+                // compiler to unroll and vectorize the zero instructions internally,
+                // while not being able to determine if it can avoid doing so.
+                write(self_ptr.add(i), 0);
             }
         }
     }

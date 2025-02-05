@@ -76,7 +76,7 @@ pub trait YARandGenerator: Sized {
     /// But this is extremely unlikely, and unless you're working at the kernel level, it's
     /// not something you should ever be concerned with.
     ///
-    /// Since Windows 10 this function is infallible, since modern Windows has adopted
+    /// Since Windows 10 this function is infallible, thanks to modern Windows adopting
     /// a user-space cryptographic architecture that can't fail during runtime.
     ///
     /// # Examples
@@ -216,18 +216,18 @@ pub trait YARandGenerator: Sized {
         self.bound(bound + 1)
     }
 
-    /// Returns a uniformly distributed i64 in the interval [`start`, `end`)
+    /// Returns a uniformly distributed i64 in the interval [`min`, `max`)
     #[inline]
-    fn range(&mut self, start: i64, end: i64) -> i64 {
-        let delta = end - start;
+    fn range(&mut self, min: i64, max: i64) -> i64 {
+        let delta = max - min;
         debug_assert!(delta > 0);
-        (self.bound(delta as u64) as i64) + start
+        (self.bound(delta as u64) as i64) + min
     }
 
-    /// Returns a uniformly distributed i64 in the interval \[`start`, `end`\]
+    /// Returns a uniformly distributed i64 in the interval \[`min`, `max`\]
     #[inline]
-    fn range_inclusive(&mut self, start: i64, end: i64) -> i64 {
-        self.range(start, end + 1)
+    fn range_inclusive(&mut self, min: i64, max: i64) -> i64 {
+        self.range(min, max + 1)
     }
 
     /// Returns a uniformly distributed f64 in the interval [0.0, 1.0).
@@ -313,8 +313,7 @@ pub trait YARandGenerator: Sized {
             x = self.f64_wide();
             y = self.f64_wide();
             s = (x * x) + (y * y);
-            // Reroll if s does not lie within the unit circle.
-            // Exclude 1 because that would return (0.0, 0.0).
+            // Reroll if s does not lie **within** the unit circle.
             match s < 1.0 && s != 0.0 {
                 true => break,
                 false => {}
