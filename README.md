@@ -34,4 +34,4 @@ let digit = rng.ascii_digit();
 assert!(digit.is_ascii_digit());
 ```
 
-See https://docs.rs/ya-rand for full documentation.
+See https://docs.rs/ya-rand/latest/ya_rand/ for full documentation.
