@@ -22,10 +22,11 @@ impl Drop for SecureRng {
             unsafe {
                 // Zeroize uses `write_volatile` because it needs to
                 // be generic and might be used for zeroing any kind of
-                // memory, but we own this type and know it's layout (integer data),
-                // so using `write` and preventing inlining allows the
-                // compiler to unroll and vectorize the zero instructions internally,
-                // while not being able to determine if it can avoid doing so.
+                // memory. Since we know our type is just groups of integer
+                // data, we prefer `write`. This allows the compiler to
+                // vectorize zeroing the data of `internal`. Disallowing
+                // inlining should prevent rustc from trying to optimize
+                // this method out.
                 write(self_ptr.add(i), 0);
             }
         }

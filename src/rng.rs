@@ -27,7 +27,7 @@ pub trait SecureYARandGenerator: YARandGenerator {
 
 /// Trait for RNGs that can be created from a user-provided seed.
 pub trait SeedableYARandGenerator: YARandGenerator + Default {
-    /// Creates a generator from the output of an internal SplitMix64 generator,
+    /// Creates a generator from the output of an internal PRNG,
     /// which is itself seeded from `seed`.
     ///
     /// As a rule: unless you are **absolutely certain** that you need to manually
@@ -125,6 +125,8 @@ pub trait YARandGenerator: Sized {
     }
 
     /// Returns a uniformly distributed u64 in the interval [0, 2<sup>`bit_count`</sup>).
+    ///
+    /// The value of `bit_count` is clamped to 64.
     #[inline]
     fn bits(&mut self, bit_count: u32) -> u64 {
         self.u64() >> (u64::BITS - bit_count.min(u64::BITS))
@@ -161,7 +163,7 @@ pub trait YARandGenerator: Sized {
     /// Returns a uniformly distributed u64 in the interval [0, `max`).
     ///
     /// Using [`YARandGenerator::bits`] when `max` happens to be a power of 2
-    /// is faster and generates less assembly.
+    /// is faster and generates better assembly.
     ///
     /// # Examples
     ///
@@ -299,7 +301,7 @@ pub trait YARandGenerator: Sized {
     }
 
     /// Returns two indepedent and normally distributed f64 values with
-    /// mean = 0 and stddev = 1.
+    /// `mean` = 0.0 and `stddev` = 1.0.
     #[cfg(feature = "std")]
     #[inline]
     fn f64_normal(&mut self) -> (f64, f64) {
@@ -331,7 +333,7 @@ pub trait YARandGenerator: Sized {
         ((x * stddev) + mean, (y * stddev) + mean)
     }
 
-    /// Returns an exponentially distributed f64 with lambda = 1.
+    /// Returns an exponentially distributed f64 with `lambda` = 1.0.
     #[cfg(feature = "std")]
     #[inline]
     fn f64_exponential(&mut self) -> f64 {

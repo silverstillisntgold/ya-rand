@@ -14,13 +14,13 @@ use ya_rand::*;
 let mut rng = new_rng();
 
 // Generate a random number with a given upper bound
-let max: u64 = 69;
+let max: u64 = 420;
 let val = rng.bound(max);
 assert!(val < max);
 
 // Generate a random number in a given range
-let min: i64 = 69;
-let max: i64 = 420;
+let min: i64 = -69;
+let max: i64 = 69;
 let val = rng.range(min, max);
 assert!(min <= val && val < max);
 
