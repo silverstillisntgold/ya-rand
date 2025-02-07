@@ -56,10 +56,9 @@ pub trait YARandGenerator: Sized {
     /// Creates a generator using randomness provided by the OS.
     ///
     /// Unlike [`YARandGenerator::new`], which will panic on failure, `try_new`
-    /// propagates the error-handling responsibility to the user. That being
-    /// said, the probability of your operating systems RNG failing is absurdly
-    /// low. And in the case that is does fail, that's not really an issue
-    /// most users are going to be able to address.
+    /// propagates the error-handling responsibility to the user. But the probability
+    /// of your operating systems RNG failing is absurdly low, and in the rare case that it
+    /// does fail, that's not really an issue most users are going to be able to address.
     ///
     /// Stick to using [`crate::new_rng`], unless you really need a generator of a
     /// different type (you probably don't), then use `new` on your desired type.
@@ -73,10 +72,10 @@ pub trait YARandGenerator: Sized {
     /// # Safety
     ///
     /// This function will panic if your OS rng fails to provide enough entropy.
-    /// But this is extremely unlikely, and unless you're working at the kernel level, it's
+    /// But this is extremely unlikely, and unless you're working at the kernel level it's
     /// not something you should ever be concerned with.
     ///
-    /// Since Windows 10 this function is infallible, thanks to modern Windows adopting
+    /// Since Windows 10 this function is infallible, thanks to modern Windows versions adopting
     /// a user-space cryptographic architecture that can't fail during runtime.
     ///
     /// # Examples
@@ -132,7 +131,7 @@ pub trait YARandGenerator: Sized {
         self.u64() >> (u64::BITS - bit_count.min(u64::BITS))
     }
 
-    /// A simple coinflip, returning a bool which has a 50% chance of being true.
+    /// A simple coinflip, returning a bool that has a 50% chance of being true.
     ///
     /// # Examples
     ///
@@ -171,7 +170,7 @@ pub trait YARandGenerator: Sized {
     /// use ya_rand::*;
     ///
     /// let mut rng = new_rng();
-    /// // Bound of 0 always returns 0.
+    /// // Special case: bound of 0 always returns 0.
     /// assert!(rng.bound(0) == 0);
     /// for i in 1..=2000 {
     ///     for _ in 0..(i * 2) {
@@ -425,11 +424,8 @@ pub trait YARandGenerator: Sized {
 
     /// Performs a Fisher-Yates shuffle on the contents of `slice`.
     ///
-    /// This implementation is the [modern variant] introduced by
+    /// This implementation is the modern variant introduced by
     /// Richard Durstenfeld. It is in-place and O(n).
-    ///
-    /// [modern variant]:
-    /// https://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm
     ///
     /// # Examples
     ///

@@ -31,7 +31,7 @@ If you need cryptographic security, enable the **secure** library feature and us
 ergonomics of the TLS implementation, there probably won't ever be. Create a local instance when and
 where you need one and use it while you need it. If you need an RNG to stick around for awhile, passing
 it between functions or storing it in structs is a perfectly valid solution. The default RNG is only 32
-bytes, so it shouldn't balloon your memory footprint or the size of your code.
+bytes, so it shouldn't balloon your memory footprint.
 
 ```
 use ya_rand::*;
@@ -79,10 +79,10 @@ assert!(digit.is_ascii_digit());
 ## Details
 
 This crate uses the [xoshiro] family of pseudo-random number generators. These generators are
-very fast (sub-ns when inlined), of [very high statistical quality], and small. They aren't cryptograpically
-secure, but most users don't need their RNG to be secure, they just need it to be random and fast.
-This crate is intended to satisfy those needs, while also being easy to use and simple to understand. It
-also happens to be small and relatively fast to compile.
+very fast, of [very high statistical quality], and small. They aren't cryptograpically secure,
+but most users don't need their RNG to be secure, they just need it to be random and fast. The default
+generator is xoshiro256++, which should provide a large enough period for most users. The xoshiro512++
+generator is also provided in case you need a longer period.
 
 [xoshiro]: https://prng.di.unimi.it/
 [very high statistical quality]: https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
@@ -92,14 +92,12 @@ those outputs into more usable forms are all high-quality and well-understood. P
 on these values uses [Lemire's method]. Doing this inclusively or within a given range are both
 applications of this same method with simple intermediary steps to alter the bound and apply shifts
 when needed. This approach is unbiased and quite fast, but for very large bounds performance might degrade
-slightly, since the algorithm needs to sample the underlying RNG more times to get an unbiased result.
-If you know your bounds ahead of time, passing them as constants can help this issue, since the initial
-division can be done at compile time when the value is known. Even better, if your bound happens to be a
-power of 2, always use [`YARandGenerator::bits`], since it's nothing more than a bitshift of the `u64`
-provided by the RNG, and will always be as fast as possible.
+slightly, since the algorithm may need to sample the underlying RNG more times to get an unbiased result.
+If your bound happens to be a power of 2, always use [`YARandGenerator::bits`], since it's nothing more
+than a bitshift of the `u64` provided by the RNG, and will always be as fast as possible.
 
 Floating point values (besides the normal and exponential distributions) are uniformally distributed,
-with all the possible outcomes being equidistant within the given interval. They are **not** maximally dense,
+with all the possible outputs being equidistant within the given interval. They are **not** maximally dense,
 if that's something you need you'll have to generate those values yourself. This approach is very fast, and
 endorsed by both [Lemire] and [Vigna] (the author of the RNGs used in this crate). The normal distribution
 implementation uses the [Marsaglia polar method], returning pairs of independently sampled `f64` values.
@@ -130,13 +128,14 @@ to you to determine if those guarantees meet the demands of your use case.
 
 Generators are seeded using entropy from the underlying OS, and have the *potential* to fail during creation.
 But in practice this is extraordinarily unlikely, and isn't something the end-user should ever worry about.
-Windows 10 and newer will never fail. This is also mentioned in the docs of [`YARandGenerator::new`].
+Modern Windows versions (10 and newer) have a crypto subsystem that will never fail during runtime, and
+the error branch should be optimized out.
 
 In the pursuit of consistent performance and no runtime failures, there are no checks performed during
-runtime in release mode. This means there are a couple areas where the end-user is able to receive garbage
+runtime in release mode. This means that there are a few areas where the end-user is able to receive garbage
 after providing garbage. It is expected of the user to provide reasonable values where there is an input to
 be given: values shouldn't be on the verge of overflow and ranges should always have a max larger than their
-min. There is very little unsafe used, and it all can easily be determined to have no ill side-effects.
+min. There is very little unsafe used, and it's all easily determined to have no ill side-effects.
 */
 
 #![no_std]
