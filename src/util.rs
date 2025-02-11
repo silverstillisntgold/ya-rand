@@ -1,8 +1,8 @@
 use core::{mem::size_of, slice::from_raw_parts_mut};
 use getrandom::{fill, Error};
 
-/// Creates and returns an array filled with random data from the
-/// output of a SplitMix64 PRNG, which is seeded using `seed`.
+/// Returns an array filled with pseudo-random data from the output of
+/// a SplitMix64 PRNG, which is seeded using `seed`.
 pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
     let mut state = [0; SIZE];
     let mut x = seed;
@@ -17,8 +17,7 @@ pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
     state
 }
 
-/// Attempts to create and return an array filled with random
-/// data from operating system entropy.
+/// Attempts to return an array filled with random data from operating system entropy.
 pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
     let mut state = [0; SIZE];
     // SAFETY: I'm over here strokin' my dick
@@ -34,6 +33,9 @@ pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
 
 /// Performs 128-bit multiplication on `x` and `y` and returns
 /// the result as a tuple of u64 values (high, low).
+///
+/// On modern architectures this can often be compiled
+/// into a single instruction.
 #[inline(always)]
 pub fn wide_mul(x: u64, y: u64) -> (u64, u64) {
     let product = (x as u128).wrapping_mul(y as u128);

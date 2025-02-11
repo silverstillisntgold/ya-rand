@@ -131,6 +131,14 @@ pub trait YARandGenerator: Sized {
         self.u64() >> (u64::BITS - bit_count.min(u64::BITS))
     }
 
+    /// Returns a uniformly distributed u64 in the interval (0, 2<sup>`bit_count`</sup>].
+    ///
+    /// The value of `bit_count` is clamped to 63.
+    #[inline]
+    fn bits_nonzero(&mut self, bit_count: u32) -> u64 {
+        self.bits(bit_count.min(u64::BITS - 1)) + 1
+    }
+
     /// A simple coinflip, returning a bool that has a 50% chance of being true.
     ///
     /// # Examples
@@ -181,14 +189,14 @@ pub trait YARandGenerator: Sized {
     #[inline]
     fn bound(&mut self, max: u64) -> u64 {
         // Lemire's method: https://arxiv.org/abs/1805.10941.
-        use crate::util::wide_mul;
-        let (mut high, mut low) = wide_mul(self.u64(), max);
+        let mut mul = || crate::util::wide_mul(self.u64(), max);
+        let (mut high, mut low) = mul();
         match low < max {
             false => {}
             true => {
                 let threshold = max.wrapping_neg() % max;
                 while low < threshold {
-                    (high, low) = wide_mul(self.u64(), max);
+                    (high, low) = mul();
                 }
             }
         }
@@ -244,17 +252,13 @@ pub trait YARandGenerator: Sized {
     /// Returns a uniformly distributed f64 in the interval (0.0, 1.0].
     #[inline]
     fn f64_nonzero(&mut self) -> f64 {
-        // Interval of (0, 2^53]
-        let nonzero = self.bits(F64_MANT) + 1;
-        (nonzero as f64) / F64_DIVISOR
+        (self.bits_nonzero(F64_MANT) as f64) / F64_DIVISOR
     }
 
     /// Returns a uniformly distributed f32 in the interval (0.0, 1.0].
     #[inline]
     fn f32_nonzero(&mut self) -> f32 {
-        // Interval of (0, 2^24]
-        let nonzero = self.bits(F32_MANT) + 1;
-        (nonzero as f32) / F32_DIVISOR
+        (self.bits_nonzero(F32_MANT) as f32) / F32_DIVISOR
     }
 
     /// Returns a uniformly distributed f64 in the interval (-1.0, 1.0).
@@ -302,7 +306,6 @@ pub trait YARandGenerator: Sized {
     /// Returns two indepedent and normally distributed f64 values with
     /// `mean` = 0.0 and `stddev` = 1.0.
     #[cfg(feature = "std")]
-    #[inline]
     fn f64_normal(&mut self) -> (f64, f64) {
         // Marsaglia polar method.
         let mut x: f64;
@@ -351,8 +354,7 @@ pub trait YARandGenerator: Sized {
 
     /// Returns a randomly chosen item from the iterator of `collection`.
     ///
-    /// This method will only return `None` when the length of
-    /// `collection` is zero.
+    /// Only returns `None` when the length of that iterator is zero.
     ///
     /// # Examples
     ///
@@ -385,11 +387,15 @@ pub trait YARandGenerator: Sized {
     {
         let mut iter = collection.into_iter();
         let len = iter.len();
-        if len == 0 {
-            return None;
+        match len != 0 {
+            // SAFETY: Since `bound` always returns a value less than
+            // it's input, `nth` will never return `None`.
+            true => unsafe {
+                let idx = self.bound(len as u64) as usize;
+                Some(iter.nth(idx).unwrap_unchecked())
+            },
+            false => None,
         }
-        let idx = self.bound(len as u64) as usize;
-        Some(unsafe { iter.nth(idx).unwrap_unchecked() })
     }
 
     /// Returns a randomly selected ASCII alphabetic character.

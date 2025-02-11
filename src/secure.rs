@@ -3,7 +3,7 @@ use chacha20::{
     rand_core::{RngCore, SeedableRng},
     ChaCha8Rng,
 };
-use core::{mem::size_of, ptr::write};
+use core::{mem::size_of, ptr::write_volatile, sync::atomic};
 
 /// A cryptographically secure random number generator.
 ///
@@ -15,21 +15,15 @@ pub struct SecureRng {
 }
 
 impl Drop for SecureRng {
-    #[inline(never)]
+    // This approach comes from the zeroize crate.
     fn drop(&mut self) {
         let self_ptr = (self as *mut Self).cast::<u8>();
         for i in 0..size_of::<SecureRng>() {
             unsafe {
-                // Zeroize uses `write_volatile` because it needs to
-                // be generic and might be used for zeroing any kind of
-                // memory. Since we know our type is just groups of integer
-                // data, we prefer `write`. This allows the compiler to
-                // vectorize zeroing the data of `internal`. Disallowing
-                // inlining should prevent rustc from trying to optimize
-                // this method out.
-                write(self_ptr.add(i), 0);
+                write_volatile(self_ptr.add(i), 0);
             }
         }
+        atomic::fence(atomic::Ordering::SeqCst);
     }
 }
 
