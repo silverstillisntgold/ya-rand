@@ -186,8 +186,9 @@ mod test {
     use super::*;
     use std::collections::HashSet;
 
-    const ITERATIONS: u64 = 1 << 12;
     const CAP: usize = 100;
+    const ITERATIONS: u64 = 1 << 12;
+    const ITERATIONS_LONG: u64 = 1 << 24;
 
     #[test]
     pub fn ascii_alphabetic() {
@@ -260,5 +261,59 @@ mod test {
         let (high, low) = util::wide_mul(x, y);
         assert!(high == EXPECTED_HIGH);
         assert!(low == EXPECTED_LOW);
+    }
+
+    #[test]
+    fn f64() {
+        let mut rng = new_rng();
+        for _ in 0..ITERATIONS_LONG {
+            let val = rng.f64();
+            assert!(0.0 <= val && val < 1.0);
+        }
+    }
+
+    #[test]
+    fn f32() {
+        let mut rng = new_rng();
+        for _ in 0..ITERATIONS_LONG {
+            let val = rng.f32();
+            assert!(0.0 <= val && val < 1.0);
+        }
+    }
+
+    #[test]
+    fn f64_nonzero() {
+        let mut rng = new_rng();
+        for _ in 0..ITERATIONS_LONG {
+            let val = rng.f64_nonzero();
+            assert!(0.0 < val && val <= 1.0);
+        }
+    }
+
+    #[test]
+    fn f32_nonzero() {
+        let mut rng = new_rng();
+        for _ in 0..ITERATIONS_LONG {
+            let val = rng.f32_nonzero();
+            assert!(0.0 < val && val <= 1.0);
+        }
+    }
+
+    #[test]
+    fn f64_wide() {
+        let mut rng = new_rng();
+        for _ in 0..ITERATIONS_LONG {
+            let val = rng.f64_wide();
+            assert!(val.abs() < 1.0);
+        }
+    }
+
+    #[test]
+    fn f32_wide() {
+        let mut rng = new_rng();
+        for _ in 0..ITERATIONS_LONG {
+            let val = rng.f32_wide();
+            assert!(val.abs() < 1.0);
+        }
     }
 }

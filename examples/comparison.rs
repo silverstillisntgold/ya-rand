@@ -79,7 +79,7 @@ fn main() {
     });
 
     println!(
-        "Filling a slice with {} values - Average time per value in nanoseconds:\n\
+        "Filling a slice with {} values || Average nanoseconds per value generated:\n\
          ----------------------------------------------------------------\n\
          Sequential (local) `rand` average time:     {:>5.2}\n\
          Sequential (local) `fastrand` average time: {:>5.2}\n\
@@ -105,10 +105,7 @@ fn main() {
 }
 
 #[inline(never)]
-fn time_in_nanos<F>(op: F) -> f64
-where
-    F: FnOnce(),
-{
+fn time_in_nanos<F: FnOnce()>(op: F) -> f64 {
     let start = Instant::now();
     op();
     let end = Instant::now();

@@ -131,14 +131,6 @@ pub trait YARandGenerator: Sized {
         self.u64() >> (u64::BITS - bit_count.min(u64::BITS))
     }
 
-    /// Returns a uniformly distributed u64 in the interval (0, 2<sup>`bit_count`</sup>].
-    ///
-    /// The value of `bit_count` is clamped to 63.
-    #[inline]
-    fn bits_nonzero(&mut self, bit_count: u32) -> u64 {
-        self.bits(bit_count.min(u64::BITS - 1)) + 1
-    }
-
     /// A simple coinflip, returning a bool that has a 50% chance of being true.
     ///
     /// # Examples
@@ -146,11 +138,11 @@ pub trait YARandGenerator: Sized {
     /// ```
     /// use ya_rand::*;
     ///
-    /// const ITER_COUNT: u64 = 1 << 24;
+    /// const ITERATIONS: u64 = 1 << 24;
     /// let mut rng = new_rng();
     /// let mut yes: u64 = 0;
     /// let mut no: u64 = 0;
-    /// for _ in 0..ITER_COUNT {
+    /// for _ in 0..ITERATIONS {
     ///     if rng.bool() {
     ///         yes += 1;
     ///     } else {
@@ -158,7 +150,7 @@ pub trait YARandGenerator: Sized {
     ///     }
     /// }
     /// // We expect the difference to be within ~5%.
-    /// let THRESHOLD: u64 = ITER_COUNT / 20;
+    /// let THRESHOLD: u64 = ITERATIONS / 20;
     /// assert!(yes.abs_diff(no) <= THRESHOLD);
     /// ```
     #[inline]
@@ -252,13 +244,17 @@ pub trait YARandGenerator: Sized {
     /// Returns a uniformly distributed f64 in the interval (0.0, 1.0].
     #[inline]
     fn f64_nonzero(&mut self) -> f64 {
-        (self.bits_nonzero(F64_MANT) as f64) / F64_DIVISOR
+        // Interval of (0, 2^53]
+        let nonzero = self.bits(F64_MANT) + 1;
+        (nonzero as f64) / F64_DIVISOR
     }
 
     /// Returns a uniformly distributed f32 in the interval (0.0, 1.0].
     #[inline]
     fn f32_nonzero(&mut self) -> f32 {
-        (self.bits_nonzero(F32_MANT) as f32) / F32_DIVISOR
+        // Interval of (0, 2^24]
+        let nonzero = self.bits(F32_MANT) + 1;
+        (nonzero as f32) / F32_DIVISOR
     }
 
     /// Returns a uniformly distributed f64 in the interval (-1.0, 1.0).
