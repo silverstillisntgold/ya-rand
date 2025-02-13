@@ -140,6 +140,10 @@ min. There is very little unsafe used, and it's all easily determined to have no
 
 #![no_std]
 
+#[cfg(feature = "std")]
+extern crate std;
+
+mod encoding;
 mod rng;
 mod util;
 mod xoshiro256pp;
@@ -163,9 +167,7 @@ pub fn new_rng() -> ShiroRng {
 #[cfg(feature = "secure")]
 mod secure;
 #[cfg(feature = "secure")]
-pub use rng::SecureYARandGenerator;
-#[cfg(feature = "secure")]
-pub use secure::SecureRng;
+pub use {rng::SecureYARandGenerator, secure::SecureRng};
 
 /// The recommended way to create new CRNG instances.
 ///
@@ -180,8 +182,6 @@ pub fn new_rng_secure() -> SecureRng {
 mod test {
     #[cfg(not(feature = "std"))]
     compile_error!("tests can only be run when the `std` feature is enabled");
-
-    extern crate std;
 
     use super::*;
     use std::collections::HashSet;

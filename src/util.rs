@@ -31,6 +31,23 @@ pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
     Ok(state)
 }
 
+#[cfg(all(feature = "std", feature = "secure"))]
+#[inline]
+pub fn text<E: crate::encoding::Encoding, const LEN: usize>(
+    rng: &mut impl crate::SecureYARandGenerator,
+) -> std::string::String {
+    use std::{string::String, vec};
+    const {
+        assert!(LEN >= E::MIN_LEN);
+    }
+    let mut data = vec![0; LEN];
+    rng.fill_bytes(&mut data);
+    for i in 0..data.len() {
+        data[i] = E::ALPHABET[(data[i] as usize) % E::ALPHABET.len()];
+    }
+    unsafe { String::from_utf8_unchecked(data) }
+}
+
 /// Performs 128-bit multiplication on `x` and `y` and returns
 /// the result as a tuple of u64 values (high, low).
 ///

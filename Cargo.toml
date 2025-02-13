@@ -14,7 +14,7 @@ all-features = true
 targets = ["x86_64-unknown-linux-gnu"]
 
 [features]
-default = ["std"]
+default = ["std", "secure"]
 inline = []
 secure = ["dep:chacha20"]
 std = ["getrandom/std"]

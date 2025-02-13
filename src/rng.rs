@@ -1,3 +1,9 @@
+#[cfg(feature = "std")]
+use {
+    crate::{encoding::*, util::text},
+    std::string::String,
+};
+
 const F64_MANT: u32 = f64::MANTISSA_DIGITS;
 const F32_MANT: u32 = f32::MANTISSA_DIGITS;
 const F64_MAX_PRECISE: u64 = 1 << F64_MANT;
@@ -9,6 +15,48 @@ const ASCII_CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxy
 /// Trait for RNGs that are known to provide streams of cryptographically secure data.
 #[cfg(feature = "secure")]
 pub trait SecureYARandGenerator: YARandGenerator {
+    #[cfg(feature = "std")]
+    fn text<E: crate::encoding::Encoding>(&mut self, len: usize) -> Option<std::string::String> {
+        use std::{string::String, vec};
+        match len >= E::MIN_LEN {
+            true => {
+                let mut data = vec![0; len];
+                self.fill_bytes(&mut data);
+                for i in 0..data.len() {
+                    data[i] = E::ALPHABET[(data[i] as usize) % E::ALPHABET.len()];
+                }
+                let s = unsafe { String::from_utf8_unchecked(data) };
+                Some(s)
+            }
+            false => None,
+        }
+    }
+
+    #[cfg(feature = "std")]
+    fn text_base64<const LEN: usize>(&mut self) -> String {
+        text::<Base64, LEN>(self)
+    }
+
+    #[cfg(feature = "std")]
+    fn text_base64_safe<const LEN: usize>(&mut self) -> String {
+        text::<Base64Safe, LEN>(self)
+    }
+
+    #[cfg(feature = "std")]
+    fn text_base32<const LEN: usize>(&mut self) -> String {
+        text::<Base32, LEN>(self)
+    }
+
+    #[cfg(feature = "std")]
+    fn text_base32_extended<const LEN: usize>(&mut self) -> String {
+        text::<Base32Extended, LEN>(self)
+    }
+
+    #[cfg(feature = "std")]
+    fn text_base16<const LEN: usize>(&mut self) -> String {
+        text::<Base16, LEN>(self)
+    }
+
     /// Fills `dest` with random data, which is safe to be used
     /// in cryptographic contexts.
     ///
