@@ -28,6 +28,7 @@ impl Drop for SecureRng {
 }
 
 impl SecureYARandGenerator for SecureRng {
+    #[inline(never)]
     fn fill_bytes(&mut self, dest: &mut [u8]) {
         self.internal.fill_bytes(dest);
     }

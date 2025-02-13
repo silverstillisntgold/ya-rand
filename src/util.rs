@@ -31,21 +31,27 @@ pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
     Ok(state)
 }
 
-#[cfg(all(feature = "std", feature = "secure"))]
-#[inline]
-pub fn text<E: crate::encoding::Encoding, const LEN: usize>(
-    rng: &mut impl crate::SecureYARandGenerator,
-) -> std::string::String {
-    use std::{string::String, vec};
-    const {
-        assert!(LEN >= E::MIN_LEN);
+#[cfg(all(feature = "secure", feature = "std"))]
+#[inline(always)]
+pub fn text<E, T>(rng: &mut T, len: usize) -> Option<std::string::String>
+where
+    E: crate::encoding::Encoding,
+    T: crate::SecureYARandGenerator,
+{
+    match len >= E::MIN_LEN {
+        true => Some({
+            // Implementation from golang's 1.24 release, but modified to be encoding generic.
+            // https://cs.opensource.google/go/go/+/refs/tags/go1.24.0:src/crypto/rand/text.go
+            let mut data = std::vec![0; len];
+            rng.fill_bytes(&mut data);
+            for i in 0..data.len() {
+                let val = data[i] as usize;
+                data[i] = E::CHARSET[val % E::CHARSET.len()];
+            }
+            unsafe { std::string::String::from_utf8_unchecked(data) }
+        }),
+        false => None,
     }
-    let mut data = vec![0; LEN];
-    rng.fill_bytes(&mut data);
-    for i in 0..data.len() {
-        data[i] = E::ALPHABET[(data[i] as usize) % E::ALPHABET.len()];
-    }
-    unsafe { String::from_utf8_unchecked(data) }
 }
 
 /// Performs 128-bit multiplication on `x` and `y` and returns

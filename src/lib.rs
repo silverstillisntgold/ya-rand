@@ -143,6 +143,7 @@ min. There is very little unsafe used, and it's all easily determined to have no
 #[cfg(feature = "std")]
 extern crate std;
 
+#[cfg(all(feature = "secure", feature = "std"))]
 mod encoding;
 mod rng;
 mod util;

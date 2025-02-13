@@ -1,4 +1,4 @@
-#[cfg(feature = "std")]
+#[cfg(all(feature = "secure", feature = "std"))]
 use {
     crate::{encoding::*, util::text},
     std::string::String,
@@ -10,51 +10,39 @@ const F64_MAX_PRECISE: u64 = 1 << F64_MANT;
 const F32_MAX_PRECISE: u64 = 1 << F32_MANT;
 const F64_DIVISOR: f64 = F64_MAX_PRECISE as f64;
 const F32_DIVISOR: f32 = F32_MAX_PRECISE as f32;
-const ASCII_CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+const ASCII_CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 /// Trait for RNGs that are known to provide streams of cryptographically secure data.
 #[cfg(feature = "secure")]
 pub trait SecureYARandGenerator: YARandGenerator {
     #[cfg(feature = "std")]
-    fn text<E: crate::encoding::Encoding>(&mut self, len: usize) -> Option<std::string::String> {
-        use std::{string::String, vec};
-        match len >= E::MIN_LEN {
-            true => {
-                let mut data = vec![0; len];
-                self.fill_bytes(&mut data);
-                for i in 0..data.len() {
-                    data[i] = E::ALPHABET[(data[i] as usize) % E::ALPHABET.len()];
-                }
-                let s = unsafe { String::from_utf8_unchecked(data) };
-                Some(s)
-            }
-            false => None,
-        }
+    #[inline(never)]
+    fn text_base64(&mut self, len: usize) -> Option<String> {
+        text::<Base64, _>(self, len)
     }
 
     #[cfg(feature = "std")]
-    fn text_base64<const LEN: usize>(&mut self) -> String {
-        text::<Base64, LEN>(self)
+    #[inline(never)]
+    fn text_base64_url(&mut self, len: usize) -> Option<String> {
+        text::<Base64URL, _>(self, len)
     }
 
     #[cfg(feature = "std")]
-    fn text_base64_safe<const LEN: usize>(&mut self) -> String {
-        text::<Base64Safe, LEN>(self)
+    #[inline(never)]
+    fn text_base32(&mut self, len: usize) -> Option<String> {
+        text::<Base32, _>(self, len)
     }
 
     #[cfg(feature = "std")]
-    fn text_base32<const LEN: usize>(&mut self) -> String {
-        text::<Base32, LEN>(self)
+    #[inline(never)]
+    fn text_base32_hex(&mut self, len: usize) -> Option<String> {
+        text::<Base32Hex, _>(self, len)
     }
 
     #[cfg(feature = "std")]
-    fn text_base32_extended<const LEN: usize>(&mut self) -> String {
-        text::<Base32Extended, LEN>(self)
-    }
-
-    #[cfg(feature = "std")]
-    fn text_base16<const LEN: usize>(&mut self) -> String {
-        text::<Base16, LEN>(self)
+    #[inline(never)]
+    fn text_base16(&mut self, len: usize) -> Option<String> {
+        text::<Base16, _>(self, len)
     }
 
     /// Fills `dest` with random data, which is safe to be used
@@ -432,12 +420,12 @@ pub trait YARandGenerator: Sized {
         let mut iter = collection.into_iter();
         let len = iter.len();
         match len != 0 {
-            // SAFETY: Since `bound` always returns a value less than
-            // it's input, `nth` will never return `None`.
-            true => unsafe {
+            true => Some({
                 let idx = self.bound(len as u64) as usize;
-                Some(iter.nth(idx).unwrap_unchecked())
-            },
+                // SAFETY: Since `bound` always returns a value less than
+                // it's input, `nth` will never return `None`.
+                unsafe { iter.nth(idx).unwrap_unchecked() }
+            }),
             false => None,
         }
     }
@@ -445,31 +433,31 @@ pub trait YARandGenerator: Sized {
     /// Returns a randomly selected ASCII alphabetic character.
     #[inline]
     fn ascii_alphabetic(&mut self) -> char {
-        unsafe { *self.choose(&ASCII_CHARS[..52]).unwrap_unchecked() as char }
+        unsafe { *self.choose(&ASCII_CHARSET[..52]).unwrap_unchecked() as char }
     }
 
     /// Returns a randomly selected ASCII uppercase character.
     #[inline]
     fn ascii_uppercase(&mut self) -> char {
-        unsafe { *self.choose(&ASCII_CHARS[..26]).unwrap_unchecked() as char }
+        unsafe { *self.choose(&ASCII_CHARSET[..26]).unwrap_unchecked() as char }
     }
 
     /// Returns a randomly selected ASCII lowercase character.
     #[inline]
     fn ascii_lowercase(&mut self) -> char {
-        unsafe { *self.choose(&ASCII_CHARS[26..52]).unwrap_unchecked() as char }
+        unsafe { *self.choose(&ASCII_CHARSET[26..52]).unwrap_unchecked() as char }
     }
 
     /// Returns a randomly selected ASCII alphanumeric character.
     #[inline]
     fn ascii_alphanumeric(&mut self) -> char {
-        unsafe { *self.choose(&ASCII_CHARS[..]).unwrap_unchecked() as char }
+        unsafe { *self.choose(&ASCII_CHARSET[..]).unwrap_unchecked() as char }
     }
 
     /// Returns a randomly selected ASCII digit character.
     #[inline]
     fn ascii_digit(&mut self) -> char {
-        unsafe { *self.choose(&ASCII_CHARS[52..]).unwrap_unchecked() as char }
+        unsafe { *self.choose(&ASCII_CHARSET[52..]).unwrap_unchecked() as char }
     }
 
     /// Performs a Fisher-Yates shuffle on the contents of `slice`.
