@@ -352,6 +352,8 @@ pub trait YARandGenerator: Sized {
     #[cfg(feature = "std")]
     fn f64_normal(&mut self) -> (f64, f64) {
         // Marsaglia polar method.
+        // TLDR: It projects a point **within** the unit
+        // circle onto the unit radius.
         let mut x: f64;
         let mut y: f64;
         let mut s: f64;

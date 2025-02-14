@@ -31,6 +31,17 @@ pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
     Ok(state)
 }
 
+/// Generates a random `String` with length `len`, using the provided
+/// `Encoding` to determine minimum secure length and character set.
+/// Returns `None` only when provided `len` is less than what the `Encoding`
+/// has determined to be secure.
+///
+/// Originally derived from golang's addition of [`rand.Text`] in release 1.24,
+/// but altered to be encoding/length generic and consistently unbiased for
+/// non-trivial bases.
+///
+/// [`rand.Text`]:
+/// https://cs.opensource.google/go/go/+/refs/tags/go1.24.0:src/crypto/rand/text.go
 #[cfg(all(feature = "secure", feature = "std"))]
 #[inline(always)]
 pub fn text<E, T>(rng: &mut T, len: usize) -> Option<std::string::String>
@@ -40,28 +51,40 @@ where
 {
     match len >= E::MIN_LEN {
         true => Some({
-            let mut data = std::vec![0; len];
-            // When this if condition is satisfied, we can use the extremely fast
-            // approach of filling `data` with random bytes, then mapping those
-            // bytes to our `CHARSET` values directly via modulo. This works because
-            // this if clause succeeding guarantees even divisibility, which guarantees
-            // even (uniform) distribution. This is evaluated at compile time,
-            // and the generated assembly is absolutely beautiful.
             const BYTE_VALUES: usize = 1 << u8::BITS;
+            // SAFETY: u8's are a trivial type and we promise to
+            // always overwrite all of them UwU.
+            let mut data = unsafe {
+                std::boxed::Box::new_uninit_slice(len)
+                    .assume_init()
+                    .into_vec()
+            };
+            // This branch is evaluated at compile time, so concrete
+            // implementations in final binaries will only have the
+            // contents of the branch suitable for the encoder used.
             if BYTE_VALUES % E::CHARSET.len() == 0 {
-                // Implementation from golang's 1.24 release, but modified to be encoding generic.
-                // https://cs.opensource.google/go/go/+/refs/tags/go1.24.0:src/crypto/rand/text.go
+                // This approach is extremely efficient, but only produces
+                // unbiased random sequences when the length of the current
+                // `CHARSET` is divisible by the amount of possible
+                // u8 values.
+                // Directly maps each random u8 to a character using modulo.
+                // Since this branch is only reachable when length is a power
+                // of two, the modulo gets optimized out and the whole thing
+                // gets vectorized. The assembly for this branch is
+                // absolutely beautiful.
                 rng.fill_bytes(&mut data);
-                for i in 0..data.len() {
-                    let val = data[i] as usize;
-                    data[i] = E::CHARSET[val % E::CHARSET.len()];
+                for d in &mut data {
+                    let val = *d as usize;
+                    *d = E::CHARSET[val % E::CHARSET.len()];
                 }
             } else {
-                // Alternative approach that remains unbiased, but isn't as fast.
+                // Alternative approach that's always unbiased,
+                // but will always be slower.
                 data.fill_with(|| *rng.choose(E::CHARSET).unwrap());
             }
             // SAFETY: All internal encodings only use ascii values, and custom
-            // encoding implementations are expected to do the same.
+            // encoding implementations agree to do the same when implementing
+            // the `Encoding` trait.
             unsafe { std::string::String::from_utf8_unchecked(data) }
         }),
         false => None,

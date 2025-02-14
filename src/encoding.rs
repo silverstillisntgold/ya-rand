@@ -19,7 +19,7 @@ pub unsafe trait Encoding {
     ///
     /// It is recommended that all characters are unique, although
     /// that's not strictly required. If you want certain characters
-    /// to appear more frequently in the generated `String`'s,  then
+    /// to appear more frequently in the generated `String`'s, then
     /// having more of them in `CHARSET` is a reasonable way to introduce bias.
     ///
     /// See trait-level docs for security comments.

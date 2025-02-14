@@ -36,31 +36,40 @@ bytes, so it shouldn't balloon your memory footprint.
 ```
 use ya_rand::*;
 
-// **Correct** instantiation is easy.
+// **Correct** instantiation is very easy.
 // This seeds the RNG using operating system entropy,
 // so you never have to worry about the quality of the
 // initial state of RNG instances.
 let mut rng = new_rng();
 
-// Generate a random number with a given upper bound
+// Generate a random number with a given upper bound.
+// There's also an inclusive variant.
 let max: u64 = 420;
 let val = rng.bound(max);
 assert!(val < max);
 
-// Generate a random number in a given range
+// Generate a random number in a given range.
+// Also with an inclusive variant.
 let min: i64 = -69;
 let max: i64 = 69;
 let val = rng.range(min, max);
 assert!(min <= val && val < max);
 
-// Generate a random floating point value
+// Generate a random floating point value.
+// Alternate intervals are available.
 let val = rng.f64();
 assert!(0.0 <= val && val < 1.0);
 
-// Generate a random ascii digit:
-// '0' - '9' as a utf-8 character
+// Generate a random ascii digit: '0'..='9' as a char.
 let digit = rng.ascii_digit();
 assert!(digit.is_ascii_digit());
+
+// In the event that you need a secure RNG.
+// Brings in additional dependencies so is
+// gated behind the **secure** feature.
+let mut s_rng = new_rng_secure();
+
+let random_string = s_rng.text_base64();
 ```
 
 ## Features
