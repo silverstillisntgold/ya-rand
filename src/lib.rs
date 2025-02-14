@@ -143,8 +143,6 @@ min. There is very little unsafe used, and it's all easily determined to have no
 #[cfg(feature = "std")]
 extern crate std;
 
-#[cfg(all(feature = "secure", feature = "std"))]
-mod encoding;
 mod rng;
 mod util;
 mod xoshiro256pp;
@@ -178,6 +176,11 @@ pub use {rng::SecureYARandGenerator, secure::SecureRng};
 pub fn new_rng_secure() -> SecureRng {
     SecureRng::new()
 }
+
+#[cfg(all(feature = "secure", feature = "std"))]
+mod encoding;
+#[cfg(all(feature = "secure", feature = "std"))]
+pub use encoding::Encoding as YARandEncoding;
 
 #[cfg(test)]
 mod test {

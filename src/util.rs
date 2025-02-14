@@ -44,11 +44,11 @@ where
             // When this if condition is satisfied, we can use the extremely fast
             // approach of filling `data` with random bytes, then mapping those
             // bytes to our `CHARSET` values directly via modulo. This works because
-            // this if clause suceeding guarantees even divisibility, which guarantees
+            // this if clause succeeding guarantees even divisibility, which guarantees
             // even (uniform) distribution. This is evaluated at compile time,
             // and the generated assembly is absolutely beautiful.
-            const WOW: usize = (u8::MAX as usize) + 1;
-            if WOW % E::CHARSET.len() == 0 {
+            const BYTE_VALUES: usize = 1 << u8::BITS;
+            if BYTE_VALUES % E::CHARSET.len() == 0 {
                 // Implementation from golang's 1.24 release, but modified to be encoding generic.
                 // https://cs.opensource.google/go/go/+/refs/tags/go1.24.0:src/crypto/rand/text.go
                 rng.fill_bytes(&mut data);
@@ -60,6 +60,8 @@ where
                 // Alternative approach that remains unbiased, but isn't as fast.
                 data.fill_with(|| *rng.choose(E::CHARSET).unwrap());
             }
+            // SAFETY: All internal encodings only use ascii values, and custom
+            // encoding implementations are expected to do the same.
             unsafe { std::string::String::from_utf8_unchecked(data) }
         }),
         false => None,

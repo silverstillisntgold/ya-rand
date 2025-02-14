@@ -4,7 +4,7 @@ const F64_MAX_PRECISE: u64 = 1 << F64_MANT;
 const F32_MAX_PRECISE: u64 = 1 << F32_MANT;
 const F64_DIVISOR: f64 = F64_MAX_PRECISE as f64;
 const F32_DIVISOR: f32 = F32_MAX_PRECISE as f32;
-pub const ASCII_CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+pub const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 #[cfg(all(feature = "secure", feature = "std"))]
 use {
@@ -53,18 +53,7 @@ pub trait SecureYARandGenerator: YARandGenerator {
 
     #[cfg(feature = "std")]
     #[inline(never)]
-    fn text_custom<E: crate::encoding::Encoding>(&mut self, len: usize) -> Option<String> {
-        const REQUIRED_SECURITY: i32 = 128;
-        let required_min_len = 2.0_f64
-            .powi(REQUIRED_SECURITY)
-            .log(E::CHARSET.len() as f64)
-            .ceil() as usize;
-        assert!(
-            E::MIN_LEN >= required_min_len,
-            "`MIN_LEN` of the `Encoding` must be at least {}",
-            required_min_len
-        );
-        assert!(E::CHARSET.iter().all(u8::is_ascii), "you fucking idiot");
+    fn text_custom<E: Encoding>(&mut self, len: usize) -> Option<String> {
         text::<E, _>(self, len)
     }
 
@@ -409,7 +398,7 @@ pub trait YARandGenerator: Sized {
 
     /// Returns a randomly chosen item from the iterator of `collection`.
     ///
-    /// Only returns `None` when the length of that iterator is zero.
+    /// Only returns `None` when the length of the iterator is zero.
     ///
     /// # Examples
     ///
@@ -456,31 +445,31 @@ pub trait YARandGenerator: Sized {
     /// Returns a randomly selected ASCII alphabetic character.
     #[inline]
     fn ascii_alphabetic(&mut self) -> char {
-        *self.choose(&ASCII_CHARSET[..52]).unwrap() as char
+        *self.choose(&ALPHANUMERIC[..52]).unwrap() as char
     }
 
     /// Returns a randomly selected ASCII uppercase character.
     #[inline]
     fn ascii_uppercase(&mut self) -> char {
-        *self.choose(&ASCII_CHARSET[..26]).unwrap() as char
+        *self.choose(&ALPHANUMERIC[..26]).unwrap() as char
     }
 
     /// Returns a randomly selected ASCII lowercase character.
     #[inline]
     fn ascii_lowercase(&mut self) -> char {
-        *self.choose(&ASCII_CHARSET[26..52]).unwrap() as char
+        *self.choose(&ALPHANUMERIC[26..52]).unwrap() as char
     }
 
     /// Returns a randomly selected ASCII alphanumeric character.
     #[inline]
     fn ascii_alphanumeric(&mut self) -> char {
-        *self.choose(&ASCII_CHARSET[..]).unwrap() as char
+        *self.choose(&ALPHANUMERIC[..]).unwrap() as char
     }
 
     /// Returns a randomly selected ASCII digit character.
     #[inline]
     fn ascii_digit(&mut self) -> char {
-        *self.choose(&ASCII_CHARSET[52..]).unwrap() as char
+        *self.choose(&ALPHANUMERIC[52..]).unwrap() as char
     }
 
     /// Performs a Fisher-Yates shuffle on the contents of `slice`.
