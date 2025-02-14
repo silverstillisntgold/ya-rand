@@ -40,13 +40,25 @@ where
 {
     match len >= E::MIN_LEN {
         true => Some({
-            // Implementation from golang's 1.24 release, but modified to be encoding generic.
-            // https://cs.opensource.google/go/go/+/refs/tags/go1.24.0:src/crypto/rand/text.go
             let mut data = std::vec![0; len];
-            rng.fill_bytes(&mut data);
-            for i in 0..data.len() {
-                let val = data[i] as usize;
-                data[i] = E::CHARSET[val % E::CHARSET.len()];
+            // When this if condition is satisfied, we can use the extremely fast
+            // approach of filling `data` with random bytes, then mapping those
+            // bytes to our `CHARSET` values directly via modulo. This works because
+            // this if clause suceeding guarantees even divisibility, which guarantees
+            // even (uniform) distribution. This is evaluated at compile time,
+            // and the generated assembly is absolutely beautiful.
+            const WOW: usize = (u8::MAX as usize) + 1;
+            if WOW % E::CHARSET.len() == 0 {
+                // Implementation from golang's 1.24 release, but modified to be encoding generic.
+                // https://cs.opensource.google/go/go/+/refs/tags/go1.24.0:src/crypto/rand/text.go
+                rng.fill_bytes(&mut data);
+                for i in 0..data.len() {
+                    let val = data[i] as usize;
+                    data[i] = E::CHARSET[val % E::CHARSET.len()];
+                }
+            } else {
+                // Alternative approach that remains unbiased, but isn't as fast.
+                data.fill_with(|| *rng.choose(E::CHARSET).unwrap());
             }
             unsafe { std::string::String::from_utf8_unchecked(data) }
         }),

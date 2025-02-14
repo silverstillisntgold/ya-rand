@@ -1,7 +1,9 @@
+/// Specifies a charset for encoding and a minimum length
+/// for encoded strings.
 pub trait Encoding {
     /// The character set of the encoding implementation.
     ///
-    /// The length of this slice will always be equal to
+    /// The length of this slice should always be equal to
     /// the base of the encoding.
     const CHARSET: &[u8];
 
@@ -12,7 +14,7 @@ pub trait Encoding {
     const MIN_LEN: usize;
 }
 
-/// Standard base64 encoding.
+/// Base64 encoding, as specified by RFC 4648.
 pub struct Base64;
 impl Encoding for Base64 {
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -20,7 +22,7 @@ impl Encoding for Base64 {
     const MIN_LEN: usize = 22;
 }
 
-/// URL and filename safe base64 encoding.
+/// Base64 encoding for URLs and filenames, as specified by RFC 4648.
 pub struct Base64URL;
 impl Encoding for Base64URL {
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
@@ -28,7 +30,15 @@ impl Encoding for Base64URL {
     const MIN_LEN: usize = 22;
 }
 
-/// Standard base32 encoding.
+/// Base62 encoding. Similar to Base64 but with only alphanumeric characters.
+pub struct Base62;
+impl Encoding for Base62 {
+    const CHARSET: &[u8] = crate::rng::ASCII_CHARSET;
+
+    const MIN_LEN: usize = 22;
+}
+
+/// Base32 encoding, as specified by RFC 4648.
 pub struct Base32;
 impl Encoding for Base32 {
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -36,7 +46,7 @@ impl Encoding for Base32 {
     const MIN_LEN: usize = 26;
 }
 
-/// Extended hexidecimal base32 encoding.
+/// Base32 encoding using extended hex, as specified by RFC 4648.
 pub struct Base32Hex;
 impl Encoding for Base32Hex {
     const CHARSET: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUV";
@@ -44,7 +54,7 @@ impl Encoding for Base32Hex {
     const MIN_LEN: usize = 26;
 }
 
-/// Standard base16 (hexidecimal) encoding.
+/// Base16 (hexidecimal) encoding, as specified by RFC 4648.
 pub struct Base16;
 impl Encoding for Base16 {
     const CHARSET: &[u8] = b"0123456789ABCDEF";
