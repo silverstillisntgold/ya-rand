@@ -1,5 +1,4 @@
-/// Specifies parameters for encoding random data into
-/// a valid utf-8 `String`.
+/// Specifies parameters for encoding random data into a valid utf-8 `String`.
 ///
 /// # Safety
 ///
@@ -14,13 +13,13 @@
 pub unsafe trait YARandEncoder {
     /// The character set of the encoder implementation.
     ///
-    /// See trait-level docs for security comments.
+    /// See trait-level docs for safety comments.
     const CHARSET: &[u8];
 
     /// Shortest length `String` that will contain at least 128 bits
     /// of randomness.
     ///
-    /// See trait-level docs for security comments.
+    /// See trait-level docs for safety comments.
     const MIN_LEN: usize;
 }
 

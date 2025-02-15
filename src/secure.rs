@@ -14,12 +14,15 @@ pub struct SecureRng {
     internal: ChaCha8Rng,
 }
 
-// This approach comes from the zeroize crate.
+// This is a manual implementation of ZeroizeOnDrop from the zeroize trait.
+//
+// https://github.com/RustCrypto/utils/blob/zeroize-v1.8.1/zeroize/src/lib.rs#L773
+// https://github.com/RustCrypto/utils/blob/zeroize-v1.8.1/zeroize/src/lib.rs#L754
 impl Drop for SecureRng {
     fn drop(&mut self) {
         let self_ptr = (self as *mut Self).cast::<u8>();
         for i in 0..size_of::<SecureRng>() {
-            // SAFETY: Trust me bro.
+            // SAFETY: Trust me bro (see the first link).
             unsafe {
                 write_volatile(self_ptr.add(i), 0);
             }
@@ -37,9 +40,16 @@ impl SecureYARandGenerator for SecureRng {
 
 impl YARandGenerator for SecureRng {
     fn try_new() -> Result<Self, getrandom::Error> {
-        let mut seed = <ChaCha8Rng as SeedableRng>::Seed::default();
-        getrandom::fill(&mut seed)?;
-        let internal = ChaCha8Rng::from_seed(seed);
+        const SEED_LEN: usize = 32;
+        const STREAM_LEN: usize = 12;
+        // Using a combined array so we only need a single syscall.
+        let mut data = [0; SEED_LEN + STREAM_LEN];
+        getrandom::fill(&mut data)?;
+        // Both of these unwraps are removed during compilation.
+        let seed: [u8; SEED_LEN] = data[..SEED_LEN].try_into().unwrap();
+        let stream: [u8; STREAM_LEN] = data[SEED_LEN..].try_into().unwrap();
+        let mut internal = ChaCha8Rng::from_seed(seed);
+        internal.set_stream(stream);
         Ok(Self { internal })
     }
 
