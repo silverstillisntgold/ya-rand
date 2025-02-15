@@ -20,14 +20,13 @@ pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
 /// Attempts to return an array filled with random data from operating system entropy.
 pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
     let mut state = [0; SIZE];
-    // SAFETY: I'm over here strokin' my dick
-    // I got lotion on my dick right now.
-    let state_bytes = unsafe {
+    // SAFETY: I'm over here strokin' my dick I got lotion on my dick right now.
+    let state_as_bytes = unsafe {
         let data = state.as_mut_ptr().cast();
         let len = state.len() * size_of::<u64>();
         from_raw_parts_mut(data, len)
     };
-    fill(state_bytes)?;
+    fill(state_as_bytes)?;
     Ok(state)
 }
 
@@ -74,10 +73,10 @@ where
                 // unbiased random sequences when the length of the current
                 // `CHARSET` is divisible by the amount of possible u8 values,
                 // which is why we need a fallback approach.
-                data.iter_mut().for_each(|d| {
+                for d in &mut data {
                     let random_value = *d as usize;
                     *d = E::CHARSET[random_value % E::CHARSET.len()];
-                });
+                }
             } else {
                 // Alternative approach that's potentially much slower,
                 // but always produces unbiased results.

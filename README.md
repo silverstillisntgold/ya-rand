@@ -4,7 +4,7 @@ Provides simple and fast pseudo/crypto random number generation.
 
 ## Usage
 
-These are a few straightforward examples to get you started.
+These are just a few simple examples to get you started.
 
 ```rust
 use ya_rand::*;
