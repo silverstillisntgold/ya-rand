@@ -10,7 +10,7 @@
 /// The `MIN_LEN` field must be at least ceil(log<sub>`base`</sub>(2<sup>128</sup>)),
 /// where `base` is the length of the `CHARSET` field. Failure to uphold
 /// this condition will result in poor security of generated `String`'s.
-pub unsafe trait YARandEncoder {
+pub unsafe trait Encoder {
     /// The character set of the encoder implementation.
     ///
     /// See trait-level docs for safety comments.
@@ -24,49 +24,71 @@ pub unsafe trait YARandEncoder {
 }
 
 /// Base64 encoding, as specified by RFC 4648.
+///
+/// Minimum secure length is 22.
 pub struct Base64;
-unsafe impl YARandEncoder for Base64 {
+unsafe impl Encoder for Base64 {
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
     const MIN_LEN: usize = 22;
 }
 
 /// Base64 encoding for URLs and filenames, as specified by RFC 4648.
+///
+/// Minimum secure length is 22.
 pub struct Base64URL;
-unsafe impl YARandEncoder for Base64URL {
+unsafe impl Encoder for Base64URL {
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
     const MIN_LEN: usize = 22;
 }
 
 /// Base62 (alphanumeric) encoding.
+///
+/// Minimum secure length is 22.
 pub struct Base62;
-unsafe impl YARandEncoder for Base62 {
+unsafe impl Encoder for Base62 {
     const CHARSET: &[u8] = crate::rng::ALPHANUMERIC;
 
     const MIN_LEN: usize = 22;
 }
 
 /// Base32 encoding, as specified by RFC 4648.
+///
+/// Minimum secure length is 26.
 pub struct Base32;
-unsafe impl YARandEncoder for Base32 {
+unsafe impl Encoder for Base32 {
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
     const MIN_LEN: usize = 26;
 }
 
 /// Base32 encoding using extended hex, as specified by RFC 4648.
+///
+/// Minimum secure length is 26.
 pub struct Base32Hex;
-unsafe impl YARandEncoder for Base32Hex {
+unsafe impl Encoder for Base32Hex {
     const CHARSET: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUV";
 
     const MIN_LEN: usize = 26;
 }
 
 /// Base16 (hexidecimal) encoding, as specified by RFC 4648.
+///
+/// Minimum secure length is 32.
 pub struct Base16;
-unsafe impl YARandEncoder for Base16 {
+unsafe impl Encoder for Base16 {
     const CHARSET: &[u8] = b"0123456789ABCDEF";
+
+    const MIN_LEN: usize = 32;
+}
+
+/// Base16 (lowercase hexidecimal) encoding.
+///
+/// Minimum secure length is 32.
+pub struct Base16Lowercase;
+unsafe impl Encoder for Base16Lowercase {
+    const CHARSET: &[u8] = b"0123456789abcdef";
 
     const MIN_LEN: usize = 32;
 }

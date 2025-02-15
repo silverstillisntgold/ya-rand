@@ -6,61 +6,70 @@ const F64_DIVISOR: f64 = F64_MAX_PRECISE as f64;
 const F32_DIVISOR: f32 = F32_MAX_PRECISE as f32;
 pub const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-#[cfg(all(feature = "secure", feature = "std"))]
-use {
-    crate::{encoding::*, util::text},
-    std::string::String,
-};
-
 /// Trait for RNGs that are known to provide streams of cryptographically secure data.
 #[cfg(feature = "secure")]
 pub trait SecureYARandGenerator: YARandGenerator {
+    /// Generates a random `String` with length `len`, using the provided
+    /// `Encoder` to determine character set and minimum secure length.
+    /// Returns `None` only when `len` is less than what the encoder
+    /// declares to be secure.
+    ///
+    /// All provided encoders are accessible through [`crate::ya_rand_encoding`].
+    /// Users wishing to implement their own encoding must do so through
+    /// [`Encoder`](crate::ya_rand_encoding::Encoder).
+    ///
+    /// Originally inspired by golang's addition of [`rand.Text`] in release 1.24,
+    /// but altered to be encoding/length generic and unbiased for non-trivial bases.
+    ///
+    /// [`rand.Text`]:
+    /// https://cs.opensource.google/go/go/+/refs/tags/go1.24.0:src/crypto/rand/text.go
     #[cfg(feature = "std")]
     #[inline(never)]
-    fn text_base64(&mut self, len: usize) -> Option<String> {
-        text::<Base64, _>(self, len)
-    }
-
-    #[cfg(feature = "std")]
-    #[inline(never)]
-    fn text_base64_url(&mut self, len: usize) -> Option<String> {
-        text::<Base64URL, _>(self, len)
-    }
-
-    #[cfg(feature = "std")]
-    #[inline(never)]
-    fn text_base62(&mut self, len: usize) -> Option<String> {
-        text::<Base62, _>(self, len)
-    }
-
-    #[cfg(feature = "std")]
-    #[inline]
-    fn text_alphanumeric(&mut self, len: usize) -> Option<String> {
-        self.text_base62(len)
-    }
-
-    #[cfg(feature = "std")]
-    #[inline(never)]
-    fn text_base32(&mut self, len: usize) -> Option<String> {
-        text::<Base32, _>(self, len)
-    }
-
-    #[cfg(feature = "std")]
-    #[inline(never)]
-    fn text_base32_hex(&mut self, len: usize) -> Option<String> {
-        text::<Base32Hex, _>(self, len)
-    }
-
-    #[cfg(feature = "std")]
-    #[inline(never)]
-    fn text_base16(&mut self, len: usize) -> Option<String> {
-        text::<Base16, _>(self, len)
-    }
-
-    #[cfg(feature = "std")]
-    #[inline(never)]
-    fn text_custom<E: YARandEncoder>(&mut self, len: usize) -> Option<String> {
-        text::<E, _>(self, len)
+    fn text<E>(&mut self, len: usize) -> Option<std::string::String>
+    where
+        E: crate::ya_rand_encoding::Encoder,
+    {
+        match len >= E::MIN_LEN {
+            true => Some({
+                const BYTE_VALUES: usize = 1 << u8::BITS;
+                // SAFETY: u8's are a trivial type and we pwomise to
+                // always overwrite all of them UwU.
+                let mut data = unsafe {
+                    std::boxed::Box::new_uninit_slice(len)
+                        .assume_init()
+                        .into_vec()
+                };
+                // This branch is evaluated at compile time, so concrete
+                // implementations in final binaries will only have the
+                // contents of the branch suitable for the encoder used.
+                if BYTE_VALUES % E::CHARSET.len() == 0 {
+                    // Fill vec with random data.
+                    self.fill_bytes(&mut data);
+                    // Directly map each random u8 to a character in the set.
+                    // Since this branch is only reachable when length is a power
+                    // of two, the modulo gets optimized out and the whole thing
+                    // gets vectorized. The assembly for this branch is
+                    // absolutely beautiful.
+                    // This approach is extremely efficient, but only produces
+                    // unbiased random sequences when the length of the current
+                    // `CHARSET` is divisible by the amount of possible u8 values,
+                    // which is why we need a fallback approach.
+                    for d in &mut data {
+                        let random_value = *d as usize;
+                        *d = E::CHARSET[random_value % E::CHARSET.len()];
+                    }
+                } else {
+                    // Alternative approach that's potentially much slower,
+                    // but always produces unbiased results.
+                    data.fill_with(|| *self.choose(E::CHARSET).unwrap());
+                }
+                // SAFETY: All provided encoders only use ascii values, and custom
+                // encoder implementations agree to do the same when implementing
+                // the `YARandEncoder` trait.
+                unsafe { std::string::String::from_utf8_unchecked(data) }
+            }),
+            false => None,
+        }
     }
 
     /// Returns a uniformly distributed u128 in the interval [0, 2<sup>128</sup>).

@@ -179,7 +179,9 @@ pub fn new_rng_secure() -> SecureRng {
 #[cfg(all(feature = "secure", feature = "std"))]
 mod encoding;
 #[cfg(all(feature = "secure", feature = "std"))]
-pub use encoding::YARandEncoder;
+pub mod ya_rand_encoding {
+    pub use super::encoding::*;
+}
 
 #[cfg(test)]
 mod test {
