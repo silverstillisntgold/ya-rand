@@ -14,16 +14,17 @@ pub struct SecureRng {
     internal: ChaCha8Rng,
 }
 
+// This approach comes from the zeroize crate.
 impl Drop for SecureRng {
-    // This approach comes from the zeroize crate.
     fn drop(&mut self) {
         let self_ptr = (self as *mut Self).cast::<u8>();
         for i in 0..size_of::<SecureRng>() {
+            // SAFETY: Trust me bro.
             unsafe {
                 write_volatile(self_ptr.add(i), 0);
             }
         }
-        atomic::fence(atomic::Ordering::SeqCst);
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
     }
 }
 

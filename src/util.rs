@@ -32,11 +32,11 @@ pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
 }
 
 /// Generates a random `String` with length `len`, using the provided
-/// `Encoding` to determine minimum secure length and character set.
-/// Returns `None` only when provided `len` is less than what the `Encoding`
-/// has determined to be secure.
+/// `YARandEncoder` to determine minimum secure length and character set.
+/// Returns `None` only when provided `len` is less than what the encoder
+/// declares to be safe.
 ///
-/// Originally derived from golang's addition of [`rand.Text`] in release 1.24,
+/// Originally inspired by golang's addition of [`rand.Text`] in release 1.24,
 /// but altered to be encoding/length generic and consistently unbiased for
 /// non-trivial bases.
 ///
@@ -46,13 +46,13 @@ pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
 #[inline(always)]
 pub fn text<E, T>(rng: &mut T, len: usize) -> Option<std::string::String>
 where
-    E: crate::encoding::Encoding,
+    E: crate::YARandEncoder,
     T: crate::SecureYARandGenerator,
 {
     match len >= E::MIN_LEN {
         true => Some({
             const BYTE_VALUES: usize = 1 << u8::BITS;
-            // SAFETY: u8's are a trivial type and we promise to
+            // SAFETY: u8's are a trivial type and we pwomise to
             // always overwrite all of them UwU.
             let mut data = unsafe {
                 std::boxed::Box::new_uninit_slice(len)
@@ -63,28 +63,29 @@ where
             // implementations in final binaries will only have the
             // contents of the branch suitable for the encoder used.
             if BYTE_VALUES % E::CHARSET.len() == 0 {
-                // This approach is extremely efficient, but only produces
-                // unbiased random sequences when the length of the current
-                // `CHARSET` is divisible by the amount of possible
-                // u8 values.
-                // Directly maps each random u8 to a character using modulo.
+                // Fill vec with random data.
+                rng.fill_bytes(&mut data);
+                // Directly map each random u8 to a character in the set.
                 // Since this branch is only reachable when length is a power
                 // of two, the modulo gets optimized out and the whole thing
                 // gets vectorized. The assembly for this branch is
                 // absolutely beautiful.
-                rng.fill_bytes(&mut data);
-                for d in &mut data {
-                    let val = *d as usize;
-                    *d = E::CHARSET[val % E::CHARSET.len()];
-                }
+                // This approach is extremely efficient, but only produces
+                // unbiased random sequences when the length of the current
+                // `CHARSET` is divisible by the amount of possible u8 values,
+                // which is why we need a fallback approach.
+                data.iter_mut().for_each(|d| {
+                    let random_value = *d as usize;
+                    *d = E::CHARSET[random_value % E::CHARSET.len()];
+                });
             } else {
-                // Alternative approach that's always unbiased,
-                // but will always be slower.
+                // Alternative approach that's potentially much slower,
+                // but always produces unbiased results.
                 data.fill_with(|| *rng.choose(E::CHARSET).unwrap());
             }
-            // SAFETY: All internal encodings only use ascii values, and custom
-            // encoding implementations agree to do the same when implementing
-            // the `Encoding` trait.
+            // SAFETY: All provided encoders only use ascii values, and custom
+            // encoder implementations agree to do the same when implementing
+            // the `YARandEncoder` trait.
             unsafe { std::string::String::from_utf8_unchecked(data) }
         }),
         false => None,

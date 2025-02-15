@@ -34,6 +34,12 @@ pub trait SecureYARandGenerator: YARandGenerator {
     }
 
     #[cfg(feature = "std")]
+    #[inline]
+    fn text_alphanumeric(&mut self, len: usize) -> Option<String> {
+        self.text_base62(len)
+    }
+
+    #[cfg(feature = "std")]
     #[inline(never)]
     fn text_base32(&mut self, len: usize) -> Option<String> {
         text::<Base32, _>(self, len)
@@ -53,7 +59,7 @@ pub trait SecureYARandGenerator: YARandGenerator {
 
     #[cfg(feature = "std")]
     #[inline(never)]
-    fn text_custom<E: Encoding>(&mut self, len: usize) -> Option<String> {
+    fn text_custom<E: YARandEncoder>(&mut self, len: usize) -> Option<String> {
         text::<E, _>(self, len)
     }
 

@@ -22,7 +22,7 @@ So here we are.
 Glob import the contents of the library and use [`new_rng`] to create new RNGs wherever
 you need them. Then call whatever method you require on those instances. All methods available
 are directly accessible through any generator instance via the dot operator, and are named
-in a way that should make it easy to quickly identify what you need.
+in a way that should make it easy to quickly identify what you need. See below for a few examples.
 
 If you need cryptographic security, enable the **secure** library feature and use
 [`new_rng_secure`] instead.
@@ -30,8 +30,7 @@ If you need cryptographic security, enable the **secure** library feature and us
 "How do I access the thread-local RNG?" There isn't one, and unless Rust improves the performance and
 ergonomics of the TLS implementation, there probably won't ever be. Create a local instance when and
 where you need one and use it while you need it. If you need an RNG to stick around for awhile, passing
-it between functions or storing it in structs is a perfectly valid solution. The default RNG is only 32
-bytes, so it shouldn't balloon your memory footprint.
+it between functions or storing it in structs is a perfectly valid solution.
 
 ```
 use ya_rand::*;
@@ -43,33 +42,23 @@ use ya_rand::*;
 let mut rng = new_rng();
 
 // Generate a random number with a given upper bound.
-// There's also an inclusive variant.
 let max: u64 = 420;
 let val = rng.bound(max);
 assert!(val < max);
 
 // Generate a random number in a given range.
-// Also with an inclusive variant.
 let min: i64 = -69;
 let max: i64 = 69;
 let val = rng.range(min, max);
 assert!(min <= val && val < max);
 
 // Generate a random floating point value.
-// Alternate intervals are available.
 let val = rng.f64();
 assert!(0.0 <= val && val < 1.0);
 
 // Generate a random ascii digit: '0'..='9' as a char.
 let digit = rng.ascii_digit();
 assert!(digit.is_ascii_digit());
-
-// In the event that you need a secure RNG.
-// Brings in additional dependencies so is
-// gated behind the **secure** feature.
-let mut s_rng = new_rng_secure();
-
-let random_string = s_rng.text_base64();
 ```
 
 ## Features
@@ -77,6 +66,7 @@ let random_string = s_rng.text_base64();
 * **std** -
     Enabled by default, but can be disabled for compatibility with `no_std` environments.
     Enables normal/exponential distributions and error type conversions for getrandom.
+    Also enables generation of random `String`'s when enabled alongside the **secure** feature.
 * **inline** -
     Marks each [`YARandGenerator::u64`] implementation with #\[inline\]. Should generally increase
     runtime performance at the cost of binary size and maybe compile time. You'll have
@@ -122,7 +112,7 @@ Exponential variates are generated using [this approach].
 
 If you're in the market for secure random number generation, you'll want to enable the **secure**
 feature, which provides [`SecureRng`] and the [`SecureYARandGenerator`] trait. It functions identically to
-the other provided RNGs, but with the addition of [`SecureYARandGenerator::fill_bytes`]. The current
+the other provided RNGs, but with added functionality that isn't safe to use on pseudo RNGs. The current
 implementation uses ChaCha with 8 rounds via the [`chacha20`] crate. In the future I'd like to look into
 doing a custom implementation of ChaCha, but no timeline on that. Why only 8 rounds? Because people who are
 very passionate about cryptography are convinced that's enough, and I have zero reason to doubt them, nor
@@ -189,7 +179,7 @@ pub fn new_rng_secure() -> SecureRng {
 #[cfg(all(feature = "secure", feature = "std"))]
 mod encoding;
 #[cfg(all(feature = "secure", feature = "std"))]
-pub use encoding::Encoding as YARandEncoding;
+pub use encoding::YARandEncoder;
 
 #[cfg(test)]
 mod test {
