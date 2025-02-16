@@ -72,14 +72,6 @@ pub trait SecureYARandGenerator: YARandGenerator {
         }
     }
 
-    /// Returns a uniformly distributed u128 in the interval [0, 2<sup>128</sup>).
-    #[inline]
-    fn u128(&mut self) -> u128 {
-        let mut data = [0; 16];
-        self.fill_bytes(&mut data);
-        u128::from_ne_bytes(data)
-    }
-
     /// Fills `dest` with random data, which is safe to be used
     /// in cryptographic contexts.
     ///

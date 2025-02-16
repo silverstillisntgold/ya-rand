@@ -1,5 +1,8 @@
 /// Specifies parameters for encoding random data into a valid utf-8 `String`.
 ///
+/// All provided implementations list their minimum secure length
+/// in the documentation of their unit struct.
+///
 /// # Safety
 ///
 /// The `CHARSET` field must only contain valid ascii characters.
