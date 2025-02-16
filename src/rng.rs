@@ -144,6 +144,9 @@ pub trait YARandGenerator: Sized {
     /// different type (you probably don't), then use `new` on your desired type.
     fn try_new() -> Result<Self, getrandom::Error>;
 
+    /// Returns a uniformly distributed u64 in the interval [0, 2<sup>64</sup>).
+    fn u64(&mut self) -> u64;
+
     /// Creates a generator using randomness provided by the OS.
     ///
     /// It is recommended to use the top-level [`crate::new_rng`] instead
@@ -181,9 +184,6 @@ pub trait YARandGenerator: Sized {
             something has gone terribly wrong",
         )
     }
-
-    /// Returns a uniformly distributed u64 in the interval [0, 2<sup>64</sup>).
-    fn u64(&mut self) -> u64;
 
     /// Returns a uniformly distributed u32 in the interval [0, 2<sup>32</sup>).
     #[inline]
