@@ -9,9 +9,24 @@ pub const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrst
 /// Trait for RNGs that are known to provide streams of cryptographically secure data.
 #[cfg(feature = "secure")]
 pub trait SecureYARandGenerator: YARandGenerator {
+    /// Fills `dest` with random data, which is safe to be used
+    /// in cryptographic contexts.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ya_rand::*;
+    ///
+    /// let mut rng = new_rng_secure();
+    /// let mut data = [0; 1738];
+    /// rng.fill_bytes(&mut data);
+    /// assert!(data.into_iter().any(|v| v != 0));
+    /// ```
+    fn fill_bytes(&mut self, dest: &mut [u8]);
+
     /// Generates a random `String` with length `len`, using the provided
     /// `Encoder` to determine character set and minimum secure length.
-    /// Returns `None` only when `len` is less than what the encoder
+    /// Only returns `None` when `len` is less than what the encoder
     /// declares to be secure.
     ///
     /// All provided encoders are accessible through [`crate::ya_rand_encoding`].
@@ -23,6 +38,23 @@ pub trait SecureYARandGenerator: YARandGenerator {
     ///
     /// [`rand.Text`]:
     /// https://cs.opensource.google/go/go/+/refs/tags/go1.24.0:src/crypto/rand/text.go
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::collections::HashSet;
+    /// use ya_rand::*;
+    ///
+    /// let mut rng = new_rng_secure();
+    /// let mut unique_count = HashSet::with_capacity(100);
+    /// // Safe to unwrap because 8192 is greater than 32, which
+    /// // is the minimum secure length of `Base16Lowercase`.
+    /// let hex_string = rng.text::<Base16Lowercase>(8192).unwrap();
+    /// for c in hex_string.bytes() {
+    ///     unique_count.insert(c);
+    /// }
+    /// assert!(E::CHARSET.iter().all(|c| unique_count.contains(c)));
+    /// ```
     #[cfg(feature = "std")]
     #[inline(never)]
     fn text<E>(&mut self, len: usize) -> Option<std::string::String>
@@ -71,21 +103,6 @@ pub trait SecureYARandGenerator: YARandGenerator {
             false => None,
         }
     }
-
-    /// Fills `dest` with random data, which is safe to be used
-    /// in cryptographic contexts.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use ya_rand::*;
-    ///
-    /// let mut rng = new_rng_secure();
-    /// let mut data = [0; 1738];
-    /// rng.fill_bytes(&mut data);
-    /// assert!(data.into_iter().any(|v| v != 0));
-    /// ```
-    fn fill_bytes(&mut self, dest: &mut [u8]);
 }
 
 /// Trait for RNGs that can be created from a user-provided seed.
