@@ -25,13 +25,16 @@ pub trait SecureYARandGenerator: YARandGenerator {
     fn fill_bytes(&mut self, dest: &mut [u8]);
 
     /// Generates a random `String` with length `len`, using the provided
-    /// `Encoder` to determine character set and minimum secure length.
+    /// `Encoder` to determine character set and minimum secure length. Since
+    /// character sets can only contain ascii values, the length of the created
+    /// `String` represents both the size (in bytes) and the amount of distinct
+    /// characters.
     /// Only returns `None` when `len` is less than what the encoder
     /// declares to be secure.
     ///
     /// All provided encoders are accessible through [`crate::ya_rand_encoding`].
-    /// Users wishing to implement their own encoding must do so through
-    /// [`Encoder`](crate::ya_rand_encoding::Encoder).
+    /// Users wishing to implement their own encoding must do so through the
+    /// [`Encoder`](crate::ya_rand_encoding::Encoder) trait.
     ///
     /// Originally inspired by golang's addition of [`rand.Text`] in release 1.24,
     /// but altered to be encoding/length generic and unbiased for non-trivial bases.
@@ -42,18 +45,28 @@ pub trait SecureYARandGenerator: YARandGenerator {
     /// # Examples
     ///
     /// ```
-    /// use std::collections::HashSet;
     /// use ya_rand::*;
     ///
     /// let mut rng = new_rng_secure();
-    /// let mut unique_count = HashSet::with_capacity(100);
     /// // Safe to unwrap because 8192 is greater than 32, which
     /// // is the minimum secure length of `Base16Lowercase`.
-    /// let hex_string = rng.text::<Base16Lowercase>(8192).unwrap();
+    /// let hex_string = rng.text::<ya_rand_encoding::Base16Lowercase>(8192).unwrap();
     /// for c in hex_string.bytes() {
-    ///     unique_count.insert(c);
+    ///     assert!(
+    ///         (b'0' <= c && c <= b'9') ||
+    ///         (b'a' <= c && c <= b'f')
+    ///     );
     /// }
-    /// assert!(E::CHARSET.iter().all(|c| unique_count.contains(c)));
+    ///
+    /// let base64_string = rng.text::<ya_rand_encoding::Base64>(8192).unwrap();
+    /// for c in base64_string.bytes() {
+    ///     assert!(
+    ///         (b'A' <= c && c <= b'Z') ||
+    ///         (b'a' <= c && c <= b'z') ||
+    ///         (b'0' <= c && c <= b'9') ||
+    ///          b'+' == c || c == b'/'
+    ///     );
+    /// }
     /// ```
     #[cfg(feature = "std")]
     #[inline(never)]
