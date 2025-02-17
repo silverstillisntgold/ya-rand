@@ -190,10 +190,12 @@ mod test {
 
     use super::*;
     use std::collections::HashSet;
+    #[cfg(feature = "secure")]
+    use ya_rand_encoding::*;
 
     const CAP: usize = 100;
-    const ITERATIONS: u64 = 1 << 12;
-    const ITERATIONS_LONG: u64 = 1 << 24;
+    const ITERATIONS: usize = 1 << 13;
+    const ITERATIONS_LONG: usize = 1 << 24;
 
     #[test]
     pub fn ascii_alphabetic() {
@@ -253,6 +255,64 @@ mod test {
             vals.insert(result);
         }
         assert!(vals.len() == 10);
+    }
+
+    #[cfg(feature = "secure")]
+    #[test]
+    fn text_base64() {
+        text::<Base64>();
+    }
+
+    #[cfg(feature = "secure")]
+    #[test]
+    fn text_base64_url() {
+        text::<Base64URL>();
+    }
+
+    #[cfg(feature = "secure")]
+    #[test]
+    fn text_base62() {
+        text::<Base62>();
+    }
+
+    #[cfg(feature = "secure")]
+    #[test]
+    fn text_base32() {
+        text::<Base32>();
+    }
+
+    #[cfg(feature = "secure")]
+    #[test]
+    fn text_base32_hex() {
+        text::<Base32Hex>();
+    }
+
+    #[cfg(feature = "secure")]
+    #[test]
+    fn text_base16() {
+        text::<Base16>();
+    }
+
+    #[cfg(feature = "secure")]
+    #[test]
+    fn text_base16_lowercase() {
+        text::<Base16Lowercase>();
+    }
+
+    #[cfg(feature = "secure")]
+    #[inline(always)]
+    fn text<E: Encoder>() {
+        let s = new_rng_secure().text::<E>(ITERATIONS).unwrap();
+        let distinct_bytes = s.bytes().collect::<HashSet<_>>();
+        let distinct_chars = s.chars().collect::<HashSet<_>>();
+
+        let lengths_are_equal = ITERATIONS == s.len()
+            && E::CHARSET.len() == distinct_bytes.len()
+            && E::CHARSET.len() == distinct_chars.len();
+        assert!(lengths_are_equal);
+
+        let contains_all_values = E::CHARSET.iter().all(|c| distinct_bytes.contains(c));
+        assert!(contains_all_values);
     }
 
     #[test]

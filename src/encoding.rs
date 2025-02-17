@@ -1,7 +1,8 @@
 /// Specifies parameters for encoding random data into a valid utf-8 `String`.
 ///
 /// All provided implementations list their minimum secure length
-/// in the documentation of their unit struct.
+/// in the documentation of their unit struct, and it is highly recommended
+/// that custom implementations do the same.
 ///
 /// # Safety
 ///

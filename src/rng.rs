@@ -26,9 +26,10 @@ pub trait SecureYARandGenerator: YARandGenerator {
 
     /// Generates a random `String` with length `len`, using the provided
     /// `Encoder` to determine character set and minimum secure length. Since
-    /// character sets can only contain ascii values, the length of the created
-    /// `String` represents both the size (in bytes) and the amount of distinct
-    /// characters.
+    /// character sets can only contain valid ascii values, the length of the created
+    /// `String` reprensents both the size of the `String` in bytes, and the
+    /// amount of characters it contains.
+    ///
     /// Only returns `None` when `len` is less than what the encoder
     /// declares to be secure.
     ///
@@ -46,25 +47,20 @@ pub trait SecureYARandGenerator: YARandGenerator {
     ///
     /// ```
     /// use ya_rand::*;
+    /// use ya_rand_encoding::Base16Lowercase as B16L;
     ///
+    /// const LEN: usize = 420;
     /// let mut rng = new_rng_secure();
-    /// // Safe to unwrap because 8192 is greater than 32, which
+    /// // Safe to unwrap because 420 is greater than 32, which
     /// // is the minimum secure length of `Base16Lowercase`.
-    /// let hex_string = rng.text::<ya_rand_encoding::Base16Lowercase>(8192).unwrap();
+    /// let hex_string = rng.text::<B16L>(LEN).unwrap();
+    /// assert!(hex_string.len() == LEN);
+    /// assert!(hex_string.bytes().count() == LEN);
+    /// assert!(hex_string.chars().count() == LEN);
     /// for c in hex_string.bytes() {
     ///     assert!(
     ///         (b'0' <= c && c <= b'9') ||
     ///         (b'a' <= c && c <= b'f')
-    ///     );
-    /// }
-    ///
-    /// let base64_string = rng.text::<ya_rand_encoding::Base64>(8192).unwrap();
-    /// for c in base64_string.bytes() {
-    ///     assert!(
-    ///         (b'A' <= c && c <= b'Z') ||
-    ///         (b'a' <= c && c <= b'z') ||
-    ///         (b'0' <= c && c <= b'9') ||
-    ///          b'+' == c || c == b'/'
     ///     );
     /// }
     /// ```
