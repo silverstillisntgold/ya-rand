@@ -30,8 +30,9 @@ pub trait SecureYARandGenerator: YARandGenerator {
     /// `String` reprensents both the size of the `String` in bytes, and the
     /// amount of characters it contains.
     ///
-    /// Only returns `None` when `len` is less than what the encoder
-    /// declares to be secure.
+    /// Only returns `None` when `len` is less than what the encoder declares to be
+    /// secure. The compiler is typically able to remove the `None` branch
+    /// when `len` is a constant satisfying the length requirement of the encoder.
     ///
     /// All provided encoders are accessible through [`crate::ya_rand_encoding`].
     /// Users wishing to implement their own encoding must do so through the
@@ -102,6 +103,8 @@ pub trait SecureYARandGenerator: YARandGenerator {
                 } else {
                     // Alternative approach that's potentially much slower,
                     // but always produces unbiased results.
+                    // The unwrap gets optimized out since rustc can see that
+                    // `E::CHARSET` has a non-zero length.
                     data.fill_with(|| *self.choose(E::CHARSET).unwrap());
                 }
                 // SAFETY: All provided encoders only use ascii values, and custom

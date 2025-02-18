@@ -17,6 +17,14 @@ instead of being straightforward to use. I wanted something easy, but also fast 
 
 So here we are.
 
+## Windows 10 users on Rust 1.71 or newer
+
+It is ***highly*** recommend that you add `RUSTFLAGS=--cfg windows_raw_dylib` to your path. Currently, the
+[`getrandom`] crate that's used to seed RNGs behind the scenes defers it's operation to `windows-targets`,
+which by default links to a 5-12MB static lib. Adding the above cfg flag tells it to instead use the
+`raw-dylib` feature, which was stabilized in Rust 1.71. This turns `windows-targets` into a small macro-only
+library, which improves compile times and decreases binary size for both debug and release builds.
+
 ## Usage
 
 Glob import the contents of the library and use [`new_rng`] to create new RNGs wherever
@@ -130,11 +138,9 @@ But in practice this is extraordinarily unlikely, and isn't something the end-us
 Modern Windows versions (10 and newer) have a crypto subsystem that will never fail during runtime, and
 the error branch should be optimized out.
 
-In the pursuit of consistent performance and no runtime failures, there are no checks performed during
-runtime in release mode. This means that there are a few areas where the end-user is able to receive garbage
-after providing garbage. It is expected of the user to provide reasonable values where there is an input to
-be given: values shouldn't be on the verge of overflow and ranges should always have a max larger than their
-min. There is very little unsafe used, and it's all easily determined to have no ill side-effects.
+In the pursuit of consistent performance and no runtime panics, there are no checks performed during
+runtime in release mode. This means that methods requiring user input expect that input to be reasonable,
+and providing values that aren't considered reasonable in the context of those methods is UB.
 */
 
 #![no_std]

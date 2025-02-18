@@ -31,6 +31,8 @@ impl YARandGenerator for SecureRng {
         let seed: [u8; SEED_LEN] = data[..SEED_LEN].try_into().unwrap();
         let stream: [u8; STREAM_LEN] = data[SEED_LEN..].try_into().unwrap();
         let mut internal = ChaCha8Rng::from_seed(seed);
+        // Randomizing the stream number further decreases the
+        // already-low odds of two instances colliding.
         internal.set_stream(stream);
         Ok(Self { internal })
     }
