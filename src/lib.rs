@@ -1,29 +1,28 @@
 /*!
 # YA-Rand: Yet Another Rand
 
-Provides simple and fast pseudo/crypto random number generation.
+Simple and fast pseudo/crypto random number generation.
 
 ## But why?
 
-Because `rand` is very cool and powerful, but kind of an enormous fucking pain in the ass
-to use, and it's far too large and involved for someone who just a needs to flip a coin once
-every 7 minutes. But if you're doing some crazy black magic computational sorcery, it almost
+Because `rand` is very cool and extremely powerful, but kind of an enormous fucking pain in the ass
+to use, and it's far too large and involved for someone who just needs to flip a coin once
+every few minutes. But if you're doing some crazy black magic computational sorcery, it almost
 certainly has something you can use to complete your spell.
 
-Other crates, like `fastrand`, `tinyrand`, or `oorandom`, fall somewhere between "I'm not sure I trust the
-backing RNG" to "this API is literally just `rand` but less powerful". Meaning their state size (how many
-internal bits they hold) is too small for comfort, or they lean into having a properly idiomatic Rust API
-instead of being straightforward to use. I wanted something easy, but also fast and statistically robust.
+Other crates, like `fastrand`, `tinyrand`, or `oorandom`, fall somewhere between "I'm not sure I trust
+the backing RNG" (state size is too small or algorithm is iffy) and "this API is literally just
+`rand` but far less powerful". I wanted something easy, but also fast and statistically robust.
 
 So here we are.
 
 ## Windows 10 users on Rust 1.71 or newer
 
-It is ***highly*** recommend that you add `RUSTFLAGS=--cfg windows_raw_dylib` to your path. Currently, the
-[`getrandom`] crate that's used to seed RNGs behind the scenes defers it's operation to `windows-targets`,
-which by default links to a 5-12MB static lib. Adding the above cfg flag tells it to instead use the
-`raw-dylib` feature, which was stabilized in Rust 1.71. This turns `windows-targets` into a small macro-only
-library, which improves compile times and decreases binary size for both debug and release builds.
+It is ***highly*** recommended that you add `RUSTFLAGS=--cfg windows_raw_dylib` to your path. Currently, the
+[`getrandom`] crate that's used to seed RNGs behind the scenes defers its operation to `windows-targets`,
+which by default statically links to a 5-12MB lib. Adding the above cfg flag tells it to instead use
+the `raw-dylib` feature, which was stabilized in Rust 1.71. This turns `windows-targets` into a small
+macro-only library, which improves compile times and decreases binary size for both debug and release builds.
 
 ## Usage
 
@@ -37,7 +36,7 @@ If you need cryptographic security, enable the **secure** library feature and us
 
 "How do I access the thread-local RNG?" There isn't one, and unless Rust improves the performance and
 ergonomics of the TLS implementation, there probably won't ever be. Create a local instance when and
-where you need one and use it while you need it. If you need an RNG to stick around for awhile, passing
+where you need one and use it while you need it. If you need an RNG to stick around for a while, passing
 it between functions or storing it in structs is a perfectly valid solution.
 
 ```
@@ -73,12 +72,13 @@ assert!(digit.is_ascii_digit());
 
 * **std** -
     Enabled by default, but can be disabled for compatibility with `no_std` environments.
-    Enables normal/exponential distributions and error type conversions for getrandom.
-    Also enables generation of random `String`'s when enabled alongside the **secure** feature.
+    Enables normal/exponential distributions and error type conversions for getrandom. Also enables
+    generation of random `String` values when enabled alongside the **secure** feature.
 * **inline** -
     Marks each [`YARandGenerator::u64`] implementation with #\[inline\]. Should generally increase
-    runtime performance at the cost of binary size and maybe compile time. You'll have
-    to test your specific use case to determine how much this feature will impact you.
+    runtime performance at the cost of binary size and compile time, especially for [`SecureRng`].
+    You'll have to test your specific use case to determine if this feature is worth it for you, but
+    generally speaking all the RNGs provided are plenty fast without additional inlining.
 * **secure** -
     Enables infrastructure for cryptographically secure random number generation via the
     [`chacha20`] crate. Moderately increases compile time and binary size.
@@ -86,7 +86,7 @@ assert!(digit.is_ascii_digit());
 ## Details
 
 This crate uses the [xoshiro] family of pseudo-random number generators. These generators are
-very fast, of [very high statistical quality], and small. They aren't cryptograpically secure,
+very fast, of [very high statistical quality], and small. They aren't cryptographically secure,
 but most users don't need their RNG to be secure, they just need it to be random and fast. The default
 generator is xoshiro256++, which should provide a large enough period for most users. The xoshiro512++
 generator is also provided in case you need a longer period.
@@ -96,16 +96,18 @@ generator is also provided in case you need a longer period.
 
 All generators output a distinct `u64` value on each call, and the various methods used for transforming
 those outputs into more usable forms are all high-quality and well-understood. Placing an upper bound
-on these values uses [Lemire's method]. Doing this inclusively or within a given range are both
-applications of this same method with simple intermediary steps to alter the bound and apply shifts
-when needed. This approach is unbiased and quite fast, but for very large bounds performance might degrade
-slightly, since the algorithm may need to sample the underlying RNG more times to get an unbiased result.
+on these values uses [Lemire's method]. Both inclusive bounding and range-based bounding are applications
+of this method, with a few intermediary steps to adjust the bound and apply shifts as needed.
+This approach is unbiased and quite fast, but for very large bounds performance might degrade slightly,
+since the algorithm may need to sample the underlying RNG multiple times to get an unbiased result.
+But this is just a byproduct of how the underlying algorithm works, and isn't something you should ever be
+worried about when using the aforementioned methods, since these resamples are few and far between.
 If your bound happens to be a power of 2, always use [`YARandGenerator::bits`], since it's nothing more
-than a bitshift of the `u64` provided by the RNG, and will always be as fast as possible.
+than a bit-shift of the original `u64` provided by the RNG, and will always be as fast as possible.
 
-Floating point values (besides the normal and exponential distributions) are uniformally distributed,
-with all the possible outputs being equidistant within the given interval. They are **not** maximally dense,
-if that's something you need you'll have to generate those values yourself. This approach is very fast, and
+Floating point values (besides the normal and exponential distributions) are uniformly distributed,
+with all the possible outputs being equidistant within the given interval. They are **not** maximally dense;
+if that's something you need, you'll have to generate those values yourself. This approach is very fast, and
 endorsed by both [Lemire] and [Vigna] (the author of the RNGs used in this crate). The normal distribution
 implementation uses the [Marsaglia polar method], returning pairs of independently sampled `f64` values.
 Exponential variates are generated using [this approach].
@@ -121,10 +123,11 @@ Exponential variates are generated using [this approach].
 If you're in the market for secure random number generation, you'll want to enable the **secure**
 feature, which provides [`SecureRng`] and the [`SecureYARandGenerator`] trait. It functions identically to
 the other provided RNGs, but with added functionality that isn't safe to use on pseudo RNGs. The current
-implementation uses ChaCha with 8 rounds via the [`chacha20`] crate. In the future I'd like to look into
-doing a custom implementation of ChaCha, but no timeline on that. Why only 8 rounds? Because people who are
-very passionate about cryptography are convinced that's enough, and I have zero reason to doubt them, nor
-any capacity to prove them wrong. See the top of page 14 of the [`Too Much Crypto`] paper.
+implementation is ChaCha with 8 rounds via the [`chacha20`] crate. I reserve the right to change this at
+any time to another RNG which is at least as secure, without changing the API or bumping the major/minor
+version. Why only 8 rounds? Because people who are very passionate about cryptography are convinced that's
+enough, and I have zero reason to doubt them, nor any capacity to prove them wrong.
+See page 14 of the [`Too Much Crypto`] paper if you're interested in the justification.
 
 The security promises made to the user are identical to those made by ChaCha as an algorithm. It is up
 to you to determine if those guarantees meet the demands of your use case.
@@ -133,14 +136,10 @@ to you to determine if those guarantees meet the demands of your use case.
 
 ## Safety
 
-Generators are seeded using entropy from the underlying OS, and have the *potential* to fail during creation.
+Generators are seeded using entropy from the underlying OS, and have the potential to fail during creation.
 But in practice this is extraordinarily unlikely, and isn't something the end-user should ever worry about.
 Modern Windows versions (10 and newer) have a crypto subsystem that will never fail during runtime, and
-the error branch should be optimized out.
-
-In the pursuit of consistent performance and no runtime panics, there are no checks performed during
-runtime in release mode. This means that methods requiring user input expect that input to be reasonable,
-and providing values that aren't considered reasonable in the context of those methods is UB.
+rustc can trivially remove the failure branch when compiling binaries for those systems.
 */
 
 #![no_std]
@@ -195,18 +194,17 @@ mod test {
     compile_error!("tests can only be run when the `std` feature is enabled");
 
     use super::*;
-    use std::collections::HashSet;
+    use std::collections::BTreeSet;
     #[cfg(feature = "secure")]
     use ya_rand_encoding::*;
 
-    const CAP: usize = 100;
-    const ITERATIONS: usize = 1 << 13;
+    const ITERATIONS: usize = 1 << 14;
     const ITERATIONS_LONG: usize = 1 << 24;
 
     #[test]
     pub fn ascii_alphabetic() {
         let mut rng = new_rng();
-        let mut vals = HashSet::with_capacity(CAP);
+        let mut vals = BTreeSet::new();
         for _ in 0..ITERATIONS {
             let result = rng.ascii_alphabetic();
             assert!(result.is_ascii_alphabetic());
@@ -218,7 +216,7 @@ mod test {
     #[test]
     pub fn ascii_uppercase() {
         let mut rng = new_rng();
-        let mut vals = HashSet::with_capacity(CAP);
+        let mut vals = BTreeSet::new();
         for _ in 0..ITERATIONS {
             let result = rng.ascii_uppercase();
             assert!(result.is_ascii_uppercase());
@@ -230,7 +228,7 @@ mod test {
     #[test]
     pub fn ascii_lowercase() {
         let mut rng = new_rng();
-        let mut vals = HashSet::with_capacity(CAP);
+        let mut vals = BTreeSet::new();
         for _ in 0..ITERATIONS {
             let result = rng.ascii_lowercase();
             assert!(result.is_ascii_lowercase());
@@ -242,7 +240,7 @@ mod test {
     #[test]
     pub fn ascii_alphanumeric() {
         let mut rng = new_rng();
-        let mut vals = HashSet::with_capacity(CAP);
+        let mut vals = BTreeSet::new();
         for _ in 0..ITERATIONS {
             let result = rng.ascii_alphanumeric();
             assert!(result.is_ascii_alphanumeric());
@@ -254,7 +252,7 @@ mod test {
     #[test]
     pub fn ascii_digit() {
         let mut rng = new_rng();
-        let mut vals = HashSet::with_capacity(CAP);
+        let mut vals = BTreeSet::new();
         for _ in 0..ITERATIONS {
             let result = rng.ascii_digit();
             assert!(result.is_ascii_digit());
@@ -309,8 +307,8 @@ mod test {
     #[inline(always)]
     fn text<E: Encoder>() {
         let s = new_rng_secure().text::<E>(ITERATIONS).unwrap();
-        let distinct_bytes = s.bytes().collect::<HashSet<_>>();
-        let distinct_chars = s.chars().collect::<HashSet<_>>();
+        let distinct_bytes = s.bytes().collect::<BTreeSet<_>>();
+        let distinct_chars = s.chars().collect::<BTreeSet<_>>();
 
         let lengths_are_equal = ITERATIONS == s.len()
             && E::CHARSET.len() == distinct_bytes.len()

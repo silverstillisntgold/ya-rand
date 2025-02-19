@@ -9,7 +9,7 @@ pub const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrst
 /// Trait for RNGs that are known to provide streams of cryptographically secure data.
 #[cfg(feature = "secure")]
 pub trait SecureYARandGenerator: YARandGenerator {
-    /// Fills `dest` with random data, which is safe to be used
+    /// Fills `dst` with random data, which is safe to be used
     /// in cryptographic contexts.
     ///
     /// # Examples
@@ -22,7 +22,7 @@ pub trait SecureYARandGenerator: YARandGenerator {
     /// rng.fill_bytes(&mut data);
     /// assert!(data.into_iter().any(|v| v != 0));
     /// ```
-    fn fill_bytes(&mut self, dest: &mut [u8]);
+    fn fill_bytes(&mut self, dst: &mut [u8]);
 
     /// Generates a random `String` with length `len`, using the provided
     /// `Encoder` to determine character set and minimum secure length. Since
@@ -85,7 +85,6 @@ pub trait SecureYARandGenerator: YARandGenerator {
                 // implementations in final binaries will only have the
                 // contents of the branch suitable for the encoder used.
                 if BYTE_VALUES % E::CHARSET.len() == 0 {
-                    // Fill vec with random data.
                     self.fill_bytes(&mut data);
                     // Directly map each random u8 to a character in the set.
                     // Since this branch is only reachable when length is a power
@@ -107,9 +106,9 @@ pub trait SecureYARandGenerator: YARandGenerator {
                     // `E::CHARSET` has a non-zero length.
                     data.fill_with(|| *self.choose(E::CHARSET).unwrap());
                 }
-                // SAFETY: All provided encoders only use ascii values, and custom
-                // encoder implementations agree to do the same when implementing
-                // the `YARandEncoder` trait.
+                // SAFETY: All provided encoders only use ascii values, and
+                // custom `Encoder` implementations agree to do the same when
+                // implementing the trait.
                 unsafe { std::string::String::from_utf8_unchecked(data) }
             }),
             false => None,
@@ -143,6 +142,37 @@ pub trait SeedableYARandGenerator: YARandGenerator + Default {
     fn new_with_seed(seed: u64) -> Self;
 }
 
+/* **** WIP ****
+/// Trait for RNGs that can simulate byte-streams, but in a way that is insecure
+/// and shouldn't be used for sensitive applications.
+#[cfg(feature = "std")]
+pub trait InsecureYARandGenerator: YARandGenerator {
+    fn fill_bytes_insecure(&mut self, dst: &mut [u8]) {
+        use core::ptr::copy_nonoverlapping as cpy;
+
+        // Approach #1
+        dst.chunks_exact_mut(size_of::<u32>()).for_each(|cur| {
+            let val = self.u32().to_ne_bytes();
+            unsafe {
+                cpy(val.as_ptr(), cur.as_mut_ptr(), cur.len());
+            }
+        });
+        dst.chunks_exact_mut(size_of::<u32>())
+            .into_remainder()
+            .iter_mut()
+            .for_each(|cur| *cur = self.u8());
+
+        // Approach #2
+        let len = (dst.len() / size_of::<u32>()) + 1;
+        let mut src = unsafe { std::boxed::Box::new_uninit_slice(len).assume_init() };
+        src.fill_with(|| self.u32());
+        unsafe {
+            cpy(src.as_ptr().cast(), dst.as_mut_ptr(), dst.len());
+        }
+    }
+}
+*/
+
 /// Base trait that all RNGs must implement.
 pub trait YARandGenerator: Sized {
     /// Creates a generator using randomness provided by the OS.
@@ -156,7 +186,7 @@ pub trait YARandGenerator: Sized {
     /// different type (you probably don't), then use `new` on your desired type.
     fn try_new() -> Result<Self, getrandom::Error>;
 
-    /// Returns a uniformly distributed u64 in the interval [0, 2<sup>64</sup>).
+    /// Returns a uniformly distributed `u64` in the interval [0, 2<sup>64</sup>).
     fn u64(&mut self) -> u64;
 
     /// Creates a generator using randomness provided by the OS.
@@ -197,25 +227,25 @@ pub trait YARandGenerator: Sized {
         )
     }
 
-    /// Returns a uniformly distributed u32 in the interval [0, 2<sup>32</sup>).
+    /// Returns a uniformly distributed `u32` in the interval [0, 2<sup>32</sup>).
     #[inline]
     fn u32(&mut self) -> u32 {
         self.bits(u32::BITS) as u32
     }
 
-    /// Returns a uniformly distributed u16 in the interval [0, 2<sup>16</sup>).
+    /// Returns a uniformly distributed `u16` in the interval [0, 2<sup>16</sup>).
     #[inline]
     fn u16(&mut self) -> u16 {
         self.bits(u16::BITS) as u16
     }
 
-    /// Returns a uniformly distributed u8 in the interval [0, 2<sup>8</sup>).
+    /// Returns a uniformly distributed `u8` in the interval [0, 2<sup>8</sup>).
     #[inline]
     fn u8(&mut self) -> u8 {
         self.bits(u8::BITS) as u8
     }
 
-    /// Returns a uniformly distributed u64 in the interval [0, 2<sup>`bit_count`</sup>).
+    /// Returns a uniformly distributed `u64` in the interval [0, 2<sup>`bit_count`</sup>).
     ///
     /// The value of `bit_count` is clamped to 64.
     #[inline]
@@ -223,7 +253,7 @@ pub trait YARandGenerator: Sized {
         self.u64() >> (u64::BITS - bit_count.min(u64::BITS))
     }
 
-    /// A simple coinflip, returning a bool that has a 50% chance of being true.
+    /// A simple coinflip, returning a `bool` that has a 50% chance of being true.
     ///
     /// # Examples
     ///
@@ -251,7 +281,7 @@ pub trait YARandGenerator: Sized {
         self.bits(1) == 1
     }
 
-    /// Returns a uniformly distributed u64 in the interval [0, `max`).
+    /// Returns a uniformly distributed `u64` in the interval [0, `max`).
     ///
     /// Using [`YARandGenerator::bits`] when `max` happens to be a power of 2
     /// is faster and generates better assembly.
@@ -284,11 +314,16 @@ pub trait YARandGenerator: Sized {
                 }
             }
         }
-        debug_assert!((max != 0 && high < max) || high == 0);
+        debug_assert!(
+            (max != 0 && high < max) || high == 0,
+            "BUG: this assertion should never be reachable"
+        );
         high
     }
 
-    /// Returns a uniformly distributed u64 in the interval \[0, `max`\].
+    /// Returns a uniformly distributed `u64` in the interval \[0, `max`\].
+    ///
+    /// It is expected that `max` < `u64::MAX`.
     ///
     /// # Examples
     ///
@@ -307,49 +342,52 @@ pub trait YARandGenerator: Sized {
         self.bound(max + 1)
     }
 
-    /// Returns a uniformly distributed i64 in the interval [`min`, `max`)
+    /// Returns a uniformly distributed `i64` in the interval [`min`, `max`)
+    ///
+    /// It is expected that `min` < `max`.
     #[inline]
     fn range(&mut self, min: i64, max: i64) -> i64 {
-        let delta = max - min;
-        debug_assert!(delta > 0);
-        (self.bound(delta as u64) as i64) + min
+        let delta = max.abs_diff(min);
+        (self.bound(delta) as i64) + min
     }
 
-    /// Returns a uniformly distributed i64 in the interval \[`min`, `max`\]
+    /// Returns a uniformly distributed `i64` in the interval \[`min`, `max`\]
+    ///
+    /// It is expected that `min` <= `max` and `max` < `u64::MAX`.
     #[inline]
     fn range_inclusive(&mut self, min: i64, max: i64) -> i64 {
         self.range(min, max + 1)
     }
 
-    /// Returns a uniformly distributed f64 in the interval [0.0, 1.0).
+    /// Returns a uniformly distributed `f64` in the interval [0.0, 1.0).
     #[inline]
     fn f64(&mut self) -> f64 {
-        (self.bits(F64_MANT) as f64) / F64_DIVISOR
+        self.bits(F64_MANT) as f64 / F64_DIVISOR
     }
 
-    /// Returns a uniformly distributed f32 in the interval [0.0, 1.0).
+    /// Returns a uniformly distributed `f32` in the interval [0.0, 1.0).
     #[inline]
     fn f32(&mut self) -> f32 {
-        (self.bits(F32_MANT) as f32) / F32_DIVISOR
+        self.bits(F32_MANT) as f32 / F32_DIVISOR
     }
 
-    /// Returns a uniformly distributed f64 in the interval (0.0, 1.0].
+    /// Returns a uniformly distributed `f64` in the interval (0.0, 1.0].
     #[inline]
     fn f64_nonzero(&mut self) -> f64 {
         // Interval of (0, 2^53]
         let nonzero = self.bits(F64_MANT) + 1;
-        (nonzero as f64) / F64_DIVISOR
+        nonzero as f64 / F64_DIVISOR
     }
 
-    /// Returns a uniformly distributed f32 in the interval (0.0, 1.0].
+    /// Returns a uniformly distributed `f32` in the interval (0.0, 1.0].
     #[inline]
     fn f32_nonzero(&mut self) -> f32 {
         // Interval of (0, 2^24]
         let nonzero = self.bits(F32_MANT) + 1;
-        (nonzero as f32) / F32_DIVISOR
+        nonzero as f32 / F32_DIVISOR
     }
 
-    /// Returns a uniformly distributed f64 in the interval (-1.0, 1.0).
+    /// Returns a uniformly distributed `f64` in the interval (-1.0, 1.0).
     #[inline]
     fn f64_wide(&mut self) -> f64 {
         // This approach is faster than using Generator::range.
@@ -367,10 +405,10 @@ pub trait YARandGenerator: Sized {
         }
         // Shift interval to (-2^53, 2^53)
         x -= OFFSET;
-        (x as f64) / F64_DIVISOR
+        x as f64 / F64_DIVISOR
     }
 
-    /// Returns a uniformly distributed f32 in the interval (-1.0, 1.0).
+    /// Returns a uniformly distributed `f32` in the interval (-1.0, 1.0).
     #[inline]
     fn f32_wide(&mut self) -> f32 {
         // This approach is faster than using Generator::range.
@@ -388,11 +426,11 @@ pub trait YARandGenerator: Sized {
         }
         // Shift interval to (-2^24, 2^24)
         x -= OFFSET;
-        (x as f32) / F32_DIVISOR
+        x as f32 / F32_DIVISOR
     }
 
-    /// Returns two indepedent and normally distributed f64 values with
-    /// `mean` = 0.0 and `stddev` = 1.0.
+    /// Returns two indepedent and normally distributed `f64` values with
+    /// a `mean` of `0.0` and a `stddev` of `1.0`.
     #[cfg(feature = "std")]
     fn f64_normal(&mut self) -> (f64, f64) {
         // Marsaglia polar method.
@@ -415,17 +453,18 @@ pub trait YARandGenerator: Sized {
         (x * t, y * t)
     }
 
-    /// Returns two indepedent and normally distributed f64 values with
+    /// Returns two indepedent and normally distributed `f64` values with
     /// user-defined `mean` and `stddev`.
+    ///
+    /// It is expected that `stddev.abs()` != `0.0`.
     #[cfg(feature = "std")]
     #[inline]
     fn f64_normal_distribution(&mut self, mean: f64, stddev: f64) -> (f64, f64) {
-        debug_assert!(stddev != 0.0);
         let (x, y) = self.f64_normal();
         ((x * stddev) + mean, (y * stddev) + mean)
     }
 
-    /// Returns an exponentially distributed f64 with `lambda` = 1.0.
+    /// Returns an exponentially distributed `f64` with `lambda` of `1.0`.
     #[cfg(feature = "std")]
     #[inline]
     fn f64_exponential(&mut self) -> f64 {
@@ -434,11 +473,12 @@ pub trait YARandGenerator: Sized {
         self.f64_nonzero().ln().abs()
     }
 
-    /// Returns an exponentially distributed f64 with user-defined `lambda`.
+    /// Returns an exponentially distributed `f64` with user-defined `lambda`.
+    ///
+    /// It is expected that `lambda.abs()` != `0.0`.
     #[cfg(feature = "std")]
     #[inline]
     fn f64_exponential_lambda(&mut self, lambda: f64) -> f64 {
-        debug_assert!(lambda != 0.0);
         self.f64_exponential() / lambda
     }
 
@@ -452,22 +492,24 @@ pub trait YARandGenerator: Sized {
     /// use ya_rand::*;
     ///
     /// const SIZE: usize = 1738;
-    /// const HALF: usize = SIZE / 2;
     /// let mut rng = new_rng();
     /// let mut v = [0; SIZE];
     /// for i in 0..SIZE {
     ///     v[i] = i;
     /// }
+    /// let (top, bottom) = v.split_at(v.len() / 2);
     ///
-    /// let random_choice = rng.choose(&v).expect("Vector 'v' is not empty.");
-    /// assert!(v.contains(random_choice));
+    /// // Sanity check.
+    /// let random_item = rng.choose(&v).expect("vector `v` is not empty");
+    /// assert!(v.contains(random_item));
     ///
-    /// let random_choice = rng.choose(&v[HALF..]).expect("Still not empty.");
-    /// assert!(v[HALF..].contains(random_choice) == true);
+    /// // Choose `random_item` from the top half of the array.
+    /// let random_item = rng.choose(top).expect("still not empty");
+    /// assert!(top.contains(random_item) == true);
     ///
-    /// // We randomly selected from the top half so we won't find
-    /// // our value in the bottom half.
-    /// assert!(v[..HALF].contains(random_choice) == false);
+    /// // We're looking in the bottom half so we won't find the
+    /// // `random_item` from the top half.
+    /// assert!(bottom.contains(random_item) == false);
     /// ```
     #[inline]
     fn choose<C>(&mut self, collection: C) -> Option<C::Item>
@@ -488,31 +530,44 @@ pub trait YARandGenerator: Sized {
         }
     }
 
-    /// Returns a randomly selected ASCII alphabetic character.
+    /// Returns a randomly selected ASCII character from the pool of:
+    ///
+    /// * `'A'..='Z'`
+    /// * `'a'..='z'`
     #[inline]
     fn ascii_alphabetic(&mut self) -> char {
         *self.choose(&ALPHANUMERIC[..52]).unwrap() as char
     }
 
-    /// Returns a randomly selected ASCII uppercase character.
+    /// Returns a randomly selected ASCII character from the pool of:
+    ///
+    /// * `'A'..='Z'`
     #[inline]
     fn ascii_uppercase(&mut self) -> char {
         *self.choose(&ALPHANUMERIC[..26]).unwrap() as char
     }
 
-    /// Returns a randomly selected ASCII lowercase character.
+    /// Returns a randomly selected ASCII character from the pool of:
+    ///
+    /// * `'a'..='z'`
     #[inline]
     fn ascii_lowercase(&mut self) -> char {
         *self.choose(&ALPHANUMERIC[26..52]).unwrap() as char
     }
 
-    /// Returns a randomly selected ASCII alphanumeric character.
+    /// Returns a randomly selected ASCII character from the pool of:
+    ///
+    /// * `'A'..='Z'`
+    /// * `'a'..='z'`
+    /// * `'0'..='9'`
     #[inline]
     fn ascii_alphanumeric(&mut self) -> char {
         *self.choose(&ALPHANUMERIC[..]).unwrap() as char
     }
 
-    /// Returns a randomly selected ASCII digit character.
+    /// Returns a randomly selected ASCII character from the pool of:
+    ///
+    /// * `'0'..='9'`
     #[inline]
     fn ascii_digit(&mut self) -> char {
         *self.choose(&ALPHANUMERIC[52..]).unwrap() as char

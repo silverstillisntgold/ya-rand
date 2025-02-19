@@ -15,8 +15,8 @@ pub struct SecureRng {
 
 impl SecureYARandGenerator for SecureRng {
     #[inline(never)]
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
-        self.internal.fill_bytes(dest);
+    fn fill_bytes(&mut self, dst: &mut [u8]) {
+        self.internal.fill_bytes(dst);
     }
 }
 

@@ -1,16 +1,16 @@
 # YA-Rand: Yet Another Rand
 
-Provides simple and fast pseudo/crypto random number generation.
+Simple and fast pseudo/crypto random number generation.
 
 ## Windows 10 users on Rust 1.71 or newer
 
-It is ***highly*** recommend that you add `RUSTFLAGS=--cfg windows_raw_dylib` to your path. Currently, the
-[`getrandom`] crate that's used to seed RNGs behind the scenes defers it's operation to `windows-targets`,
-which by default links to a 5-12MB static lib. Adding the above cfg flag tells it to instead use the
-`raw-dylib` feature, which was stabilized in Rust 1.71. This turns `windows-targets` into a small macro-only
-library, which improves compile times and decreases binary size for both debug and release builds.
+It is ***highly*** recommended that you add `RUSTFLAGS=--cfg windows_raw_dylib` to your path. Currently, the
+[`getrandom`] crate that's used to seed RNGs behind the scenes defers its operation to `windows-targets`,
+which by default statically links to a 5-12MB lib. Adding the above cfg flag tells it to instead use
+the `raw-dylib` feature, which was stabilized in Rust 1.71. This turns `windows-targets` into a small
+macro-only library, which improves compile times and decreases binary size for both debug and release builds.
 
-[`getrandom`]: https://github.com/rust-random/getrandom
+[`getrandom`]: https://docs.rs/getrandom/latest/getrandom/
 
 ## Usage
 
