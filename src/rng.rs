@@ -7,7 +7,6 @@ const F32_DIVISOR: f32 = F32_MAX_PRECISE as f32;
 pub const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 /// Trait for RNGs that are known to provide streams of cryptographically secure data.
-#[cfg(feature = "secure")]
 pub trait SecureYARandGenerator: YARandGenerator {
     /// Fills `dst` with random data, which is safe to be used
     /// in cryptographic contexts.

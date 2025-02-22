@@ -16,17 +16,10 @@ targets = ["x86_64-unknown-linux-gnu"]
 [features]
 default = ["std"]
 inline = []
-secure = ["dep:chacha20"]
 std = ["getrandom/std"]
 
-[dependencies.chacha20]
-default-features = false
-features = ["rng"]
-optional = true
-version = "=0.10.0-pre.3"
-
-[dependencies.getrandom]
-version = "0.3"
+[dependencies]
+getrandom = "0.3"
 
 [dev-dependencies]
 fastrand = "2.3"

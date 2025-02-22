@@ -148,11 +148,13 @@ rustc can trivially remove the failure branch when compiling binaries for those 
 extern crate std;
 
 mod rng;
+mod secure;
 mod util;
 mod xoshiro256pp;
 mod xoshiro512pp;
 
-pub use rng::{SeedableYARandGenerator, YARandGenerator};
+pub use rng::{SecureYARandGenerator, SeedableYARandGenerator, YARandGenerator};
+pub use secure::SecureRng;
 pub use xoshiro256pp::Xoshiro256pp;
 pub use xoshiro512pp::Xoshiro512pp;
 
@@ -167,35 +169,25 @@ pub fn new_rng() -> ShiroRng {
     ShiroRng::new()
 }
 
-#[cfg(feature = "secure")]
-mod secure;
-#[cfg(feature = "secure")]
-pub use {rng::SecureYARandGenerator, secure::SecureRng};
-
 /// The recommended way to create new CRNG instances.
 ///
 /// Identical to calling [`SecureRng::new`].
-#[cfg(feature = "secure")]
 #[inline]
 pub fn new_rng_secure() -> SecureRng {
     SecureRng::new()
 }
 
-#[cfg(all(feature = "secure", feature = "std"))]
+#[cfg(feature = "std")]
 mod encoding;
-#[cfg(all(feature = "secure", feature = "std"))]
+#[cfg(feature = "std")]
 pub mod ya_rand_encoding {
     pub use super::encoding::*;
 }
 
 #[cfg(test)]
 mod test {
-    #[cfg(not(feature = "std"))]
-    compile_error!("tests can only be run when the `std` feature is enabled");
-
     use super::*;
     use std::collections::BTreeSet;
-    #[cfg(feature = "secure")]
     use ya_rand_encoding::*;
 
     const ITERATIONS: usize = 1 << 14;
@@ -261,49 +253,41 @@ mod test {
         assert!(vals.len() == 10);
     }
 
-    #[cfg(feature = "secure")]
     #[test]
     fn text_base64() {
         text::<Base64>();
     }
 
-    #[cfg(feature = "secure")]
     #[test]
     fn text_base64_url() {
         text::<Base64URL>();
     }
 
-    #[cfg(feature = "secure")]
     #[test]
     fn text_base62() {
         text::<Base62>();
     }
 
-    #[cfg(feature = "secure")]
     #[test]
     fn text_base32() {
         text::<Base32>();
     }
 
-    #[cfg(feature = "secure")]
     #[test]
     fn text_base32_hex() {
         text::<Base32Hex>();
     }
 
-    #[cfg(feature = "secure")]
     #[test]
     fn text_base16() {
         text::<Base16>();
     }
 
-    #[cfg(feature = "secure")]
     #[test]
     fn text_base16_lowercase() {
         text::<Base16Lowercase>();
     }
 
-    #[cfg(feature = "secure")]
     #[inline(always)]
     fn text<E: Encoder>() {
         let s = new_rng_secure().text::<E>(ITERATIONS).unwrap();
