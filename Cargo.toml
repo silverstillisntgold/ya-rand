@@ -26,3 +26,9 @@ fastrand = "2.3"
 oorandom = "11.1"
 rand = "0.9"
 rayon = "1.10"
+
+
+[dev-dependencies.chacha20]
+default-features = false
+features = ["rng"]
+version = "=0.10.0-pre.3"

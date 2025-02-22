@@ -98,7 +98,6 @@ impl From<[u8; Self::SEED_LEN]> for ChaCha {
 }
 
 impl ChaCha {
-    /// ChaCha8.
     pub const DOUBLE_ROUNDS: usize = 4;
 
     pub const SEED_LEN: usize = size_of::<Self>();

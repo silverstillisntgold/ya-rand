@@ -1,11 +1,9 @@
-use super::{Machine, Row};
-use core::{
-    arch::x86_64::{
-        __m256i, _mm256_add_epi32, _mm256_or_si256, _mm256_set1_epi32, _mm256_set_epi32,
-        _mm256_slli_epi32, _mm256_srli_epi32, _mm256_xor_si256,
-    },
-    ops::Add,
-};
+use super::{ChaCha, Machine, Row};
+#[cfg(target_arch = "x86")]
+use core::arch::x86::*;
+#[cfg(target_arch = "x86_64")]
+use core::arch::x86_64::*;
+use core::ops::Add;
 
 #[derive(Clone, Copy)]
 pub struct AVX2 {
@@ -64,7 +62,7 @@ impl Machine for AVX2 {
     type Output = [u64; size_of::<Self>() / size_of::<u64>()];
 
     #[inline(always)]
-    fn new(state: super::ChaCha) -> Self {
+    fn new(state: ChaCha) -> Self {
         let increment_counter = |mut row: Row, incr: i64| -> [i32; 4] {
             unsafe {
                 row.i64x2[0] = row.i64x2[0].wrapping_add(incr);

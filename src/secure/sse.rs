@@ -1,11 +1,9 @@
-use super::{ChaCha, Machine, Row};
-use core::{
-    arch::x86_64::{
-        __m128i, _mm_add_epi32, _mm_or_si128, _mm_set1_epi32, _mm_set_epi32, _mm_slli_epi32,
-        _mm_srli_epi32, _mm_xor_si128,
-    },
-    ops::Add,
-};
+use super::{ChaCha, Machine};
+#[cfg(target_arch = "x86")]
+use core::arch::x86::*;
+#[cfg(target_arch = "x86_64")]
+use core::arch::x86_64::*;
+use core::ops::Add;
 
 #[derive(Clone, Copy)]
 pub struct SSE {
@@ -65,18 +63,15 @@ impl Machine for SSE {
 
     #[inline(always)]
     fn new(state: ChaCha) -> Self {
-        let increment_counter = |mut row: Row, incr: i64| -> [i32; 4] {
-            unsafe {
-                row.i64x2[0] = row.i64x2[0].wrapping_add(incr);
-            }
-            unsafe { row.i32x4 }
-        };
-
-        let base_counter = state.row_d;
-        let p1 = increment_counter(base_counter, 0);
-        let p2 = increment_counter(base_counter, 1);
-        let p3 = increment_counter(base_counter, 2);
-        let p4 = increment_counter(base_counter, 3);
+        let base_counter = unsafe { state.row_d.i64x2[0] };
+        let level_1 = base_counter;
+        let p1: [i32; 2] = unsafe { core::mem::transmute(level_1) };
+        let level_2 = base_counter.wrapping_add(1);
+        let p2: [i32; 2] = unsafe { core::mem::transmute(level_2) };
+        let level_3 = base_counter.wrapping_add(2);
+        let p3: [i32; 2] = unsafe { core::mem::transmute(level_3) };
+        let level_4 = base_counter.wrapping_add(3);
+        let p4: [i32; 2] = unsafe { core::mem::transmute(level_4) };
 
         let state = unsafe {
             [
@@ -96,10 +91,10 @@ impl Machine for SSE {
                 _mm_set1_epi32(state.row_c.i32x4[2]),
                 _mm_set1_epi32(state.row_c.i32x4[3]),
                 // Row d
-                _mm_set_epi32(p1[0], p2[0], p3[0], p4[0]),
-                _mm_set_epi32(p1[1], p2[1], p3[1], p4[1]),
-                _mm_set_epi32(p1[2], p2[2], p3[2], p4[2]),
-                _mm_set_epi32(p1[3], p2[3], p3[3], p4[3]),
+                _mm_setr_epi32(p1[0], p2[0], p3[0], p4[0]),
+                _mm_setr_epi32(p1[1], p2[1], p3[1], p4[1]),
+                _mm_set1_epi32(state.row_d.i32x4[2]),
+                _mm_set1_epi32(state.row_d.i32x4[3]),
             ]
         };
         Self { state }
