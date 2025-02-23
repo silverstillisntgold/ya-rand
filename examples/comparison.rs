@@ -115,7 +115,7 @@ fn main() {
     );
 }
 
-#[inline(always)]
+#[inline(never)]
 fn time_in_nanos<F: FnOnce()>(op: F) -> f64 {
     let start = Instant::now();
     op();

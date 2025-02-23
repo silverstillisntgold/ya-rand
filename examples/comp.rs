@@ -19,7 +19,7 @@ fn main() {
     });
 
     let mut v = Box::new_uninit_slice(ITERATIONS);
-    let mut rng = SecureRngLocal::new();
+    let mut rng = SecureRngChaCha20::new();
     let chacha20 = time_in_nanos(move || {
         v.iter_mut().for_each(|v| {
             v.write(rng.u64());
@@ -57,7 +57,7 @@ fn main() {
     );
 }
 
-#[inline(always)]
+#[inline(never)]
 fn time_in_nanos<F: FnOnce()>(op: F) -> f64 {
     let start = Instant::now();
     op();
@@ -70,18 +70,11 @@ fn time_in_nanos<F: FnOnce()>(op: F) -> f64 {
 use chacha20::{rand_core::RngCore, ChaCha8Rng};
 
 #[derive(Debug)]
-pub struct SecureRngLocal {
+pub struct SecureRngChaCha20 {
     internal: ChaCha8Rng,
 }
 
-impl SecureYARandGenerator for SecureRngLocal {
-    #[inline(never)]
-    fn fill_bytes(&mut self, dst: &mut [u8]) {
-        self.internal.fill_bytes(dst);
-    }
-}
-
-impl YARandGenerator for SecureRngLocal {
+impl YARandGenerator for SecureRngChaCha20 {
     fn try_new() -> Result<Self, getrandom::Error> {
         const SEED_LEN: usize = 32;
         const STREAM_LEN: usize = 12;
@@ -98,7 +91,8 @@ impl YARandGenerator for SecureRngLocal {
         Ok(Self { internal })
     }
 
-    #[cfg_attr(feature = "inline", inline)]
+    #[cfg_attr(not(feature = "inline"), inline(never))]
+    #[cfg_attr(feature = "inline", inline(always))]
     fn u64(&mut self) -> u64 {
         self.internal.next_u64()
     }
