@@ -1,12 +1,12 @@
+mod soft;
 mod sse2;
 mod util;
 
-use core::mem::transmute;
-
 use crate::{SecureYARandGenerator, YARandGenerator};
+use core::mem::transmute;
 use util::*;
 
-use sse2::SSE as CurrentMachine;
+use sse2::SSE2 as CurrentMachine;
 
 pub struct SecureRng {
     index: usize,

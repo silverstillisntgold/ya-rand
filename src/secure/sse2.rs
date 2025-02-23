@@ -1,4 +1,4 @@
-use super::{ChaCha, Machine, BUF_LEN, ROW_A};
+use super::{util::DEPTH, ChaCha, Machine, BUF_LEN, ROW_A};
 use crate::secure::Row;
 #[cfg(target_arch = "x86")]
 use core::arch::x86::*;
@@ -7,11 +7,11 @@ use core::arch::x86_64::*;
 use core::{mem::transmute, ops::Add};
 
 #[derive(Clone)]
-pub struct SSE {
-    state: [[__m128i; 4]; 4],
+pub struct SSE2 {
+    state: [[__m128i; 4]; DEPTH],
 }
 
-impl Add for SSE {
+impl Add for SSE2 {
     type Output = Self;
 
     #[inline(always)]
@@ -27,7 +27,7 @@ impl Add for SSE {
     }
 }
 
-macro_rules! rotate_left_32 {
+macro_rules! rotate_left {
     ($value:expr, $LEFT_SHIFT:expr) => {{
         const RIGHT_SHIFT: i32 = i32::BITS as i32 - $LEFT_SHIFT;
         let left_shift = _mm_slli_epi32($value, $LEFT_SHIFT);
@@ -36,26 +36,26 @@ macro_rules! rotate_left_32 {
     }};
 }
 
-impl SSE {
+impl SSE2 {
     #[inline(always)]
     fn quarter_round(&mut self) {
         unsafe {
             for [a, b, c, d] in self.state.iter_mut() {
                 *a = _mm_add_epi32(*a, *b);
                 *d = _mm_xor_si128(*d, *a);
-                *d = rotate_left_32!(*d, 16);
+                *d = rotate_left!(*d, 16);
 
                 *c = _mm_add_epi32(*c, *d);
                 *b = _mm_xor_si128(*b, *c);
-                *b = rotate_left_32!(*b, 12);
+                *b = rotate_left!(*b, 12);
 
                 *a = _mm_add_epi32(*a, *b);
                 *d = _mm_xor_si128(*d, *a);
-                *d = rotate_left_32!(*d, 8);
+                *d = rotate_left!(*d, 8);
 
                 *c = _mm_add_epi32(*c, *d);
                 *b = _mm_xor_si128(*b, *c);
-                *b = rotate_left_32!(*b, 7);
+                *b = rotate_left!(*b, 7);
             }
         }
     }
@@ -83,18 +83,16 @@ impl SSE {
     }
 }
 
-impl Machine for SSE {
-    const DEPTH: i64 = size_of::<Self>() as i64 / 64;
-
+impl Machine for SSE2 {
     #[inline(always)]
-    fn new(state: ChaCha) -> Self {
+    fn new(state: &ChaCha) -> Self {
         unsafe {
             let row_a = transmute(ROW_A);
             let row_b = transmute(state.row_b);
             let row_c = transmute(state.row_c);
             let row_d = transmute(state.row_d);
-            let mut state = SSE {
-                state: [[row_a, row_b, row_c, row_d]; 4],
+            let mut state = SSE2 {
+                state: [[row_a, row_b, row_c, row_d]; DEPTH],
             };
             for (i, [_, _, _, d]) in state.state.iter_mut().enumerate() {
                 let temp: &mut Row = transmute(d);

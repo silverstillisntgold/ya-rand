@@ -1,15 +1,12 @@
-use core::mem::{transmute, MaybeUninit};
 pub use core::{ops::Add, ptr::copy};
 
 /// "expand 32-byte k"
 pub const ROW_A: [i32; 4] = [0x6170_7865, 0x3320_646e, 0x7962_2d32, 0x6b20_6574];
 pub const BUF_LEN: usize = 32;
-pub const BUF_LEN_BYTES: usize = BUF_LEN * size_of::<u64>();
+pub const DEPTH: usize = 4;
 
 pub trait Machine: Add<Output = Self> + Clone {
-    const DEPTH: i64;
-
-    fn new(state: ChaCha) -> Self;
+    fn new(state: &ChaCha) -> Self;
 
     fn double_round(&mut self);
 
@@ -44,8 +41,8 @@ impl From<[u8; Self::SEED_LEN]> for ChaCha {
     #[inline(always)]
     fn from(value: [u8; Self::SEED_LEN]) -> Self {
         let mut result = Self::default();
-        let result_ptr = &mut result as *mut Self;
         unsafe {
+            let result_ptr = &mut result as *mut Self;
             copy(value.as_ptr(), result_ptr.cast(), Self::SEED_LEN);
             // Zero the counter
             result.row_d.i64x2[0] = 0;
@@ -61,17 +58,17 @@ impl ChaCha {
 
     #[inline(never)]
     pub fn block<M: Machine>(&mut self, buf: &mut [u64; BUF_LEN]) {
-        let mut state = M::new(self.clone());
+        let mut state = M::new(&self);
         let old_state = state.clone();
+        unsafe {
+            // Increment 64-bit counter
+            self.row_d.i64x2[0] = self.row_d.i64x2[0].wrapping_add(DEPTH as i64);
+        }
         for _ in 0..Self::DOUBLE_ROUNDS {
             state.double_round();
         }
         let result = state + old_state;
         result.fill_block(buf);
-        unsafe {
-            // Increment 64-bit counter
-            self.row_d.i64x2[0] = self.row_d.i64x2[0].wrapping_add(M::DEPTH);
-        }
     }
 }
 
