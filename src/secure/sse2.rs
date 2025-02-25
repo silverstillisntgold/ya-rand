@@ -5,7 +5,7 @@ use core::arch::x86::*;
 use core::arch::x86_64::*;
 use core::{mem::transmute, ops::Add};
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Matrix {
     state: [[__m128i; 4]; DEPTH],
 }
@@ -26,6 +26,8 @@ impl Add for Matrix {
     }
 }
 
+/// Need a custom implementation for rotation. SSE2 is old
+/// enough that I won't hold it against them.
 macro_rules! rotate_left_epi32 {
     ($value:expr, $LEFT_SHIFT:expr) => {{
         const RIGHT_SHIFT: i32 = i32::BITS as i32 - $LEFT_SHIFT;
@@ -36,6 +38,7 @@ macro_rules! rotate_left_epi32 {
 }
 
 impl Matrix {
+    /// Just a standard chacha quarter round.
     #[inline(always)]
     fn quarter_round(&mut self) {
         unsafe {
@@ -86,12 +89,13 @@ impl Machine for Matrix {
     #[inline(always)]
     fn new(state: &ChaCha<Self>) -> Self {
         unsafe {
-            let row_a = transmute(ROW_A);
-            let row_b = transmute(state.row_b);
-            let row_c = transmute(state.row_c);
-            let row_d = transmute(state.row_d);
             let mut state = Matrix {
-                state: [[row_a, row_b, row_c, row_d]; DEPTH],
+                state: [[
+                    transmute(ROW_A),
+                    transmute(state.row_b),
+                    transmute(state.row_c),
+                    transmute(state.row_d),
+                ]; DEPTH],
             };
             state.state[1][3] = _mm_add_epi64(state.state[1][3], _mm_set_epi64x(0, 1));
             state.state[2][3] = _mm_add_epi64(state.state[2][3], _mm_set_epi64x(0, 2));

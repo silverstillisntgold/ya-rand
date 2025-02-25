@@ -1,43 +1,68 @@
-use core::{marker::PhantomData, mem::MaybeUninit};
-use core::{ops::Add, ptr::copy};
+use core::ops::Add;
+use core::{
+    marker::PhantomData,
+    mem::{transmute, MaybeUninit},
+};
 
-/// "expand 32-byte k"
+/// "expand 32-byte k", the standard constant for ChaCha.
 pub const ROW_A: [i32; 4] = [0x6170_7865, 0x3320_646e, 0x7962_2d32, 0x6b20_6574];
-pub const BUF_LEN: usize = 32;
+/// Normally, ChaCha outputs only 16 `i32`'s, but we process in
+/// chunks of 4 and output `u64`'s.
+pub const BUF_LEN: usize = 16 * 4 / 2;
+/// Since we process in chunks of 4, the counter of the base
+/// ChaCha instance needs to be incremented by 4.
 pub const DEPTH: usize = 4;
 
+/// 4 double rounds makes this a ChaCha8 implementation.
+/// Increasing this would be trivial if ever needed, but the
+/// test datastreams would need to be updated as well.
 pub const CHACHA_DOUBLE_ROUNDS: usize = 4;
 pub const CHACHA_SEED_LEN: usize = size_of::<ChaCha<super::Matrix>>();
 
+/// Defines the interface that concrete implementations need to
+/// implement to process the state of a `ChaCha` instance.
+///
+/// Instances should always process `DEPTH` amount of chacha blocks.
 pub trait Machine: Add<Output = Self> + Clone {
+    /// Uses the current `ChaCha` state to create a new `Machine`,
+    /// which will internally handle it's own counters.
     fn new(state: &ChaCha<Self>) -> Self;
 
+    /// Process a standard double round of the ChaCha algorithm.
+    ///
+    /// The way that the `Machine` goes about this is completely up
+    /// to the implementation, but the result should always be able
+    /// to pass all the test.
     fn double_round(&mut self);
 
+    /// Fills `buf` with the output of four processed ChaCha blocks.
+    /// It's computationally cheaper to fill a passed-in buffer than
+    /// to create and return a new one.
     fn fill_block(self, buf: &mut [u64; BUF_LEN]);
 }
 
+/// Wrapper for the data of a `ChaCha` row. In a reference
+/// implementation this would just be the `i32x4` field, but having
+/// `i64x2` is useful for working with a 64-bit counter and `i8x16`
+/// is useful for testing. `i16x8` is included for completeness.
 #[allow(unused)]
 #[derive(Clone, Copy)]
 pub union Row {
     pub i8x16: [i8; 16],
+    pub i16x8: [i16; 8],
     pub i32x4: [i32; 4],
     pub i64x2: [i64; 2],
 }
 
-impl Default for Row {
-    #[inline(always)]
-    fn default() -> Self {
-        unsafe { MaybeUninit::zeroed().assume_init() }
-    }
-}
-
+/// Long-term storage for the state of a chacha matrix.
+/// There is no `row_a` stored since we can just load it in from
+/// a static array when creating a new `Machine`.
 #[derive(Clone)]
 pub struct ChaCha<M> {
     pub row_b: Row,
     pub row_c: Row,
     pub row_d: Row,
-    pd: PhantomData<M>,
+    _pd: PhantomData<M>,
 }
 
 impl<M> Default for ChaCha<M> {
@@ -50,22 +75,27 @@ impl<M> Default for ChaCha<M> {
 impl<M> From<[u8; CHACHA_SEED_LEN]> for ChaCha<M> {
     #[inline(always)]
     fn from(value: [u8; CHACHA_SEED_LEN]) -> Self {
-        let mut result = Self::default();
-        unsafe {
-            let result_ptr = &mut result as *mut Self;
-            copy(value.as_ptr(), result_ptr.cast(), CHACHA_SEED_LEN);
-        }
-        result
+        // We randomize **all** bits of the matrix, even the counter.
+        // If used as a cipher this is a completely braindead approach,
+        // but since this is exclusively for use in a CRNG it's fine.
+        unsafe { transmute(value) }
     }
 }
 
 impl<M: Machine> ChaCha<M> {
+    /// Computes 4 blocks of chacha and fills `buf` with the output.
+    ///
+    /// This is the inline boundary. Everything beneath this should be
+    /// marked `#[inline(always)]`, since most (all?) of it should be vector
+    /// intrinsics or capable of being optimized into vector instructions.
     #[inline(never)]
     pub fn block(&mut self, buf: &mut [u64; BUF_LEN]) {
-        let mut state = M::new(&self);
+        let mut state = M::new(self);
         let old_state = state.clone();
         unsafe {
-            // Increment 64-bit counter
+            // Increment 64-bit counter by `DEPTH`. Since we randomize
+            // the counter, it's important that this uses `wrapping_add`,
+            // otherwise debug builds might fuck themselves over.
             self.row_d.i64x2[0] = self.row_d.i64x2[0].wrapping_add(DEPTH as i64);
         }
         for _ in 0..CHACHA_DOUBLE_ROUNDS {
@@ -97,7 +127,7 @@ mod test {
     #[cfg(target_feature = "neon")]
     #[test]
     fn chacha_neon() {
-        todo!();
+        chacha_test::<neon::Matrix>();
     }
 
     #[cfg(target_feature = "avx2")]
@@ -123,33 +153,32 @@ mod test {
 
         let mut state = reset();
         state.block(&mut data);
-        all_zeroes(data);
+        all_bytes_zeroed(data);
 
         state = reset();
         unsafe {
             state.row_b.i8x16[0] = 1;
         }
         state.block(&mut data);
-        first_byte_key(data);
+        first_key_byte_is_1(data);
 
         state = reset();
         unsafe {
             state.row_d.i8x16[8] = 1;
         }
         state.block(&mut data);
-        first_byte_nonce(data);
+        first_nonce_byte_is_1(data);
 
         const NOT_BITS: i64 = !0;
-        state = reset();
         state.row_b.i64x2 = [NOT_BITS, NOT_BITS];
         state.row_c.i64x2 = [NOT_BITS, NOT_BITS];
-        // Still want the counter to be 0.
+        // Tests always expect the counter to start at 0.
         state.row_d.i64x2 = [0, NOT_BITS];
         state.block(&mut data);
-        all_bytes(data);
+        all_bytes_set(data);
     }
 
-    fn all_zeroes(data: [u64; BUF_LEN]) {
+    fn all_bytes_zeroed(data: [u64; BUF_LEN]) {
         const KEYSTREAM_BLOCK_0: [u8; 64] = [
             0x3e, 0x00, 0xef, 0x2f, 0x89, 0x5f, 0x40, 0xd6, 0x7f, 0x5b, 0xb8, 0xe8, 0x1f, 0x09,
             0xa5, 0xa1, 0x2c, 0x84, 0x0e, 0xc3, 0xce, 0x9a, 0x7f, 0x3b, 0x18, 0x1b, 0xe1, 0x88,
@@ -169,7 +198,7 @@ mod test {
         assert!(block_1 == KEYSTREAM_BLOCK_1);
     }
 
-    fn first_byte_key(data: [u64; BUF_LEN]) {
+    fn first_key_byte_is_1(data: [u64; BUF_LEN]) {
         const KEYSTREAM_BLOCK_0: [u8; 64] = [
             0xcf, 0x5e, 0xe9, 0xa0, 0x49, 0x4a, 0xa9, 0x61, 0x3e, 0x05, 0xd5, 0xed, 0x72, 0x5b,
             0x80, 0x4b, 0x12, 0xf4, 0xa4, 0x65, 0xee, 0x63, 0x5a, 0xcc, 0x3a, 0x31, 0x1d, 0xe8,
@@ -189,7 +218,7 @@ mod test {
         assert!(block_1 == KEYSTREAM_BLOCK_1);
     }
 
-    fn first_byte_nonce(data: [u64; BUF_LEN]) {
+    fn first_nonce_byte_is_1(data: [u64; BUF_LEN]) {
         const KEYSTREAM_BLOCK_0: [u8; 64] = [
             0x2b, 0x8f, 0x4b, 0xb3, 0x79, 0x83, 0x06, 0xca, 0x51, 0x30, 0xd4, 0x7c, 0x4f, 0x8d,
             0x4e, 0xd1, 0x3a, 0xa0, 0xed, 0xcc, 0xc1, 0xbe, 0x69, 0x42, 0x09, 0x0f, 0xae, 0xec,
@@ -209,7 +238,7 @@ mod test {
         assert!(block_1 == KEYSTREAM_BLOCK_1);
     }
 
-    fn all_bytes(data: [u64; BUF_LEN]) {
+    fn all_bytes_set(data: [u64; BUF_LEN]) {
         const KEYSTREAM_BLOCK_0: [u8; 64] = [
             0xe1, 0x63, 0xbb, 0xf8, 0xc9, 0xa7, 0x39, 0xd1, 0x89, 0x25, 0xee, 0x83, 0x62, 0xda,
             0xd2, 0xcd, 0xc9, 0x73, 0xdf, 0x05, 0x22, 0x5a, 0xfb, 0x2a, 0xa2, 0x63, 0x96, 0xf2,
@@ -229,8 +258,10 @@ mod test {
         assert!(block_1 == KEYSTREAM_BLOCK_1);
     }
 
+    // We're only able to retrieve chacha output in blocks of 4, but we
+    // only bother testing the first two blocks, discarding the rest.
     fn fetch_blocks(data: [u64; BUF_LEN]) -> ([u8; 64], [u8; 64]) {
-        const BYTE_LEN: usize = BUF_LEN * size_of::<u64>();
+        const BYTE_LEN: usize = size_of::<[u64; BUF_LEN]>();
         let stream_as_bytes: [u8; BYTE_LEN] = unsafe { transmute(data) };
         let block_0: [u8; 64] = stream_as_bytes[..64].try_into().unwrap();
         let block_1: [u8; 64] = stream_as_bytes[64..128].try_into().unwrap();

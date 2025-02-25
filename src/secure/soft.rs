@@ -4,7 +4,7 @@ use super::{
 };
 use core::{mem::transmute, ops::Add};
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Matrix {
     state: [[i32; 16]; DEPTH],
 }
@@ -27,27 +27,18 @@ impl Matrix {
     #[inline(always)]
     fn quarter_round(&mut self, a: usize, b: usize, c: usize, d: usize) {
         for matrix in self.state.iter_mut() {
-            // a += b;
-            // d ^= a;
-            // d <<<= 16;
             matrix[a] = matrix[a].wrapping_add(matrix[b]);
             matrix[d] ^= matrix[a];
             matrix[d] = matrix[d].rotate_left(16);
-            // c += d;
-            // b ^= c;
-            // b <<<= 12;
+
             matrix[c] = matrix[c].wrapping_add(matrix[d]);
             matrix[b] ^= matrix[c];
             matrix[b] = matrix[b].rotate_left(12);
-            // a += b;
-            // d ^= a;
-            // d <<<=  8;
+
             matrix[a] = matrix[a].wrapping_add(matrix[b]);
             matrix[d] ^= matrix[a];
             matrix[d] = matrix[d].rotate_left(8);
-            // c += d;
-            // b ^= c;
-            // b <<<=  7;
+
             matrix[c] = matrix[c].wrapping_add(matrix[d]);
             matrix[b] ^= matrix[c];
             matrix[b] = matrix[b].rotate_left(7);

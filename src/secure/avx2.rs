@@ -5,9 +5,11 @@ use core::arch::x86::*;
 use core::arch::x86_64::*;
 use core::{mem::transmute, ops::Add};
 
+/// Since each avx2 register holds twice the bits,
+/// we only need half the registers of sse2.
 const LOCAL_DEPTH: usize = DEPTH / 2;
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Matrix {
     state: [[__m256i; 4]; LOCAL_DEPTH],
 }
@@ -28,6 +30,8 @@ impl Add for Matrix {
     }
 }
 
+/// Need a custom implementation because for some reason the
+/// retards didn't give avx2 rotate instructions lol.
 macro_rules! rotate_left_epi32 {
     ($value:expr, $LEFT_SHIFT:expr) => {{
         const RIGHT_SHIFT: i32 = i32::BITS as i32 - $LEFT_SHIFT;
@@ -88,12 +92,13 @@ impl Machine for Matrix {
     #[inline(always)]
     fn new(state: &ChaCha<Self>) -> Self {
         unsafe {
-            let row_a = _mm256_broadcastsi128_si256(transmute(ROW_A));
-            let row_b = _mm256_broadcastsi128_si256(transmute(state.row_b));
-            let row_c = _mm256_broadcastsi128_si256(transmute(state.row_c));
-            let row_d = _mm256_broadcastsi128_si256(transmute(state.row_d));
             let mut state = Matrix {
-                state: [[row_a, row_b, row_c, row_d]; LOCAL_DEPTH],
+                state: [[
+                    _mm256_broadcastsi128_si256(transmute(ROW_A)),
+                    _mm256_broadcastsi128_si256(transmute(state.row_b)),
+                    _mm256_broadcastsi128_si256(transmute(state.row_c)),
+                    _mm256_broadcastsi128_si256(transmute(state.row_d)),
+                ]; LOCAL_DEPTH],
             };
             state.state[0][3] = _mm256_add_epi64(state.state[0][3], _mm256_set_epi64x(0, 0, 0, 1));
             state.state[1][3] = _mm256_add_epi64(state.state[1][3], _mm256_set_epi64x(0, 2, 0, 3));
