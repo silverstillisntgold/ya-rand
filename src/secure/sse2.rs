@@ -6,12 +6,12 @@ use core::arch::x86::*;
 use core::arch::x86_64::*;
 use core::{mem::transmute, ops::Add};
 
-#[derive(Clone)]
-pub struct SSE2 {
+#[derive(Clone, Copy)]
+pub struct Matrix {
     state: [[__m128i; 4]; DEPTH],
 }
 
-impl Add for SSE2 {
+impl Add for Matrix {
     type Output = Self;
 
     #[inline(always)]
@@ -36,7 +36,7 @@ macro_rules! rotate_left {
     }};
 }
 
-impl SSE2 {
+impl Matrix {
     #[inline(always)]
     fn quarter_round(&mut self) {
         unsafe {
@@ -83,15 +83,15 @@ impl SSE2 {
     }
 }
 
-impl Machine for SSE2 {
+impl Machine for Matrix {
     #[inline(always)]
-    fn new(state: &ChaCha) -> Self {
+    fn new(state: &ChaCha<Self>) -> Self {
         unsafe {
             let row_a = transmute(ROW_A);
             let row_b = transmute(state.row_b);
             let row_c = transmute(state.row_c);
             let row_d = transmute(state.row_d);
-            let mut state = SSE2 {
+            let mut state = Matrix {
                 state: [[row_a, row_b, row_c, row_d]; DEPTH],
             };
             for (i, [_, _, _, d]) in state.state.iter_mut().enumerate() {

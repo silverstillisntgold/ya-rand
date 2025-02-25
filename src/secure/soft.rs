@@ -1,73 +1,75 @@
-use super::{util::DEPTH, ChaCha, Machine, BUF_LEN, ROW_A};
-use crate::secure::Row;
+use super::{
+    util::{ChaChaFull, RawMatrix, DEPTH},
+    ChaCha, Machine, BUF_LEN,
+};
 use core::{mem::transmute, ops::Add};
 
-#[derive(Clone)]
-pub struct Soft {
-    state: [[i32; 16]; DEPTH],
+#[derive(Clone, Copy)]
+pub union Matrix {
+    chacha: [ChaChaFull; DEPTH],
+    state: [RawMatrix; DEPTH],
 }
 
-impl Add for Soft {
+impl Add for Matrix {
     type Output = Self;
 
     #[inline(always)]
     fn add(mut self, rhs: Self) -> Self::Output {
-        for i in 0..self.state.len() {
-            for j in 0..self.state[i].len() {
-                self.state[i][j] = self.state[i][j].wrapping_add(rhs.state[i][j]);
+        unsafe {
+            for i in 0..self.state.len() {
+                for j in 0..self.state[i].len() {
+                    self.state[i][j] = self.state[i][j].wrapping_add(rhs.state[i][j]);
+                }
             }
+            self
         }
-        self
     }
 }
 
-impl Soft {
+impl Matrix {
     #[inline(always)]
     fn quarter_round(&mut self, a: usize, b: usize, c: usize, d: usize) {
-        for matrix in self.state.iter_mut() {
-            matrix[a] = matrix[a].wrapping_add(matrix[b]);
-            matrix[d] ^= matrix[a];
-            matrix[d] = matrix[d].rotate_left(16);
-
-            matrix[c] = matrix[c].wrapping_add(matrix[d]);
-            matrix[b] ^= matrix[c];
-            matrix[b] = matrix[b].rotate_left(12);
-
-            matrix[a] = matrix[a].wrapping_add(matrix[b]);
-            matrix[d] ^= matrix[a];
-            matrix[d] = matrix[d].rotate_left(8);
-
-            matrix[c] = matrix[c].wrapping_add(matrix[d]);
-            matrix[b] ^= matrix[c];
-            matrix[b] = matrix[b].rotate_left(7);
+        unsafe {
+            for matrix in self.state.iter_mut() {
+                // a += b;
+                // d ^= a;
+                // d <<<= 16;
+                matrix[a] = matrix[a].wrapping_add(matrix[b]);
+                matrix[d] ^= matrix[a];
+                matrix[d] = matrix[d].rotate_left(16);
+                // c += d;
+                // b ^= c;
+                // b <<<= 12;
+                matrix[c] = matrix[c].wrapping_add(matrix[d]);
+                matrix[b] ^= matrix[c];
+                matrix[b] = matrix[b].rotate_left(12);
+                // a += b;
+                // d ^= a;
+                // d <<<=  8;
+                matrix[a] = matrix[a].wrapping_add(matrix[b]);
+                matrix[d] ^= matrix[a];
+                matrix[d] = matrix[d].rotate_left(8);
+                // c += d;
+                // b ^= c;
+                // b <<<=  7;
+                matrix[c] = matrix[c].wrapping_add(matrix[d]);
+                matrix[b] ^= matrix[c];
+                matrix[b] = matrix[b].rotate_left(7);
+            }
         }
     }
 }
 
-#[allow(unused)]
-#[derive(Clone, Copy)]
-struct ChaChaTemp {
-    row_a: Row,
-    row_b: Row,
-    row_c: Row,
-    row_d: Row,
-}
-
-impl Machine for Soft {
+impl Machine for Matrix {
     #[inline(always)]
-    fn new(state: &ChaCha) -> Self {
-        let mut state = [ChaChaTemp {
-            row_a: unsafe { transmute(ROW_A) },
-            row_b: state.row_b,
-            row_c: state.row_c,
-            row_d: state.row_d,
-        }; DEPTH];
-        for i in 0..state.len() {
+    fn new(state: &ChaCha<Self>) -> Self {
+        let mut chacha = [ChaChaFull::new(state); DEPTH];
+        for i in 0..chacha.len() {
             unsafe {
-                state[i].row_d.i64x2[0] = state[i].row_d.i64x2[0].wrapping_add(i as i64);
+                chacha[i].row_d.i64x2[0] = chacha[i].row_d.i64x2[0].wrapping_add(i as i64);
             }
         }
-        unsafe { transmute(state) }
+        Self { chacha }
     }
 
     #[inline(always)]
