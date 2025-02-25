@@ -1,29 +1,8 @@
 use super::{
-    util::{Row, DEPTH, ROW_A},
+    util::{DEPTH, ROW_A},
     ChaCha, Machine, BUF_LEN,
 };
 use core::{mem::transmute, ops::Add};
-
-#[allow(unused)]
-#[derive(Clone, Copy)]
-pub struct ChaChaFull {
-    pub row_a: Row,
-    pub row_b: Row,
-    pub row_c: Row,
-    pub row_d: Row,
-}
-
-impl ChaChaFull {
-    #[inline(always)]
-    pub fn new<M>(chacha: &ChaCha<M>) -> Self {
-        Self {
-            row_a: Row { i32x4: ROW_A },
-            row_b: chacha.row_b,
-            row_c: chacha.row_c,
-            row_d: chacha.row_d,
-        }
-    }
-}
 
 #[derive(Clone, Copy)]
 pub struct Matrix {
@@ -79,14 +58,14 @@ impl Matrix {
 impl Machine for Matrix {
     #[inline(always)]
     fn new(state: &ChaCha<Self>) -> Self {
-        let mut chacha = [ChaChaFull::new(state); DEPTH];
-        for i in 0..chacha.len() {
-            unsafe {
-                chacha[i].row_d.i64x2[0] = chacha[i].row_d.i64x2[0].wrapping_add(i as i64);
+        unsafe {
+            let mut chacha = [[transmute(ROW_A), state.row_b, state.row_c, state.row_d]; DEPTH];
+            chacha[1][3].i64x2[0] = chacha[1][3].i64x2[0].wrapping_add(1);
+            chacha[2][3].i64x2[0] = chacha[2][3].i64x2[0].wrapping_add(2);
+            chacha[3][3].i64x2[0] = chacha[3][3].i64x2[0].wrapping_add(3);
+            Self {
+                state: transmute(chacha),
             }
-        }
-        Self {
-            state: unsafe { transmute(chacha) },
         }
     }
 

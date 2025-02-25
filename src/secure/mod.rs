@@ -1,5 +1,6 @@
 #![allow(invalid_value)]
 
+mod avx2;
 mod soft;
 mod sse2;
 mod util;
@@ -11,7 +12,7 @@ use core::{
 };
 use util::*;
 
-use sse2::Matrix;
+use avx2::Matrix;
 
 pub struct SecureRng {
     index: usize,

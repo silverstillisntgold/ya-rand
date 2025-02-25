@@ -17,9 +17,9 @@ pub trait Machine: Add<Output = Self> + Clone {
     fn fill_block(self, buf: &mut [u64; BUF_LEN]);
 }
 
+#[allow(unused)]
 #[derive(Clone, Copy)]
 pub union Row {
-    #[cfg(test)]
     pub i8x16: [i8; 16],
     pub i32x4: [i32; 4],
     pub i64x2: [i64; 2],
@@ -94,6 +94,19 @@ mod test {
         assert!(ACTUAL == *EXPECTED);
     }
 
+    #[cfg(target_feature = "neon")]
+    #[test]
+    fn chacha_neon() {
+        todo!();
+    }
+
+    #[cfg(target_feature = "avx2")]
+    #[test]
+    fn chacha_avx2() {
+        chacha_test::<avx2::Matrix>();
+    }
+
+    #[cfg(target_feature = "sse2")]
     #[test]
     fn chacha_sse2() {
         chacha_test::<sse2::Matrix>();
@@ -114,14 +127,14 @@ mod test {
 
         state = reset();
         unsafe {
-            state.row_b.i8x16[0] = state.row_b.i8x16[0].wrapping_add(1);
+            state.row_b.i8x16[0] = 1;
         }
         state.block(&mut data);
         first_byte_key(data);
 
         state = reset();
         unsafe {
-            state.row_d.i8x16[8] = state.row_d.i8x16[8].wrapping_add(1);
+            state.row_d.i8x16[8] = 1;
         }
         state.block(&mut data);
         first_byte_nonce(data);

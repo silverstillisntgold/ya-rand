@@ -1,5 +1,4 @@
 use super::{util::DEPTH, ChaCha, Machine, BUF_LEN, ROW_A};
-use crate::secure::Row;
 #[cfg(target_arch = "x86")]
 use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
@@ -94,10 +93,9 @@ impl Machine for Matrix {
             let mut state = Matrix {
                 state: [[row_a, row_b, row_c, row_d]; DEPTH],
             };
-            for (i, [_, _, _, d]) in state.state.iter_mut().enumerate() {
-                let temp: &mut Row = transmute(d);
-                temp.i64x2[0] = temp.i64x2[0].wrapping_add(i as i64);
-            }
+            state.state[1][3] = _mm_add_epi64(state.state[1][3], _mm_set_epi64x(0, 1));
+            state.state[2][3] = _mm_add_epi64(state.state[2][3], _mm_set_epi64x(0, 2));
+            state.state[3][3] = _mm_add_epi64(state.state[3][3], _mm_set_epi64x(0, 3));
             state
         }
     }
