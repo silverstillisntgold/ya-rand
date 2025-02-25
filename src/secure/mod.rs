@@ -1,32 +1,36 @@
+#![allow(invalid_value)]
+
 mod soft;
 mod sse2;
 mod util;
 
 use crate::{SecureYARandGenerator, YARandGenerator};
-use core::mem::{transmute, MaybeUninit};
+use core::{
+    mem::{transmute, MaybeUninit},
+    ptr::copy,
+};
 use util::*;
 
-use soft::Matrix as CurrentMachine;
+use sse2::Matrix;
 
 pub struct SecureRng {
     index: usize,
     buf: [u64; BUF_LEN],
-    internal: ChaCha<CurrentMachine>,
+    internal: ChaCha<Matrix>,
 }
 
 impl SecureYARandGenerator for SecureRng {
     #[inline(never)]
     fn fill_bytes(&mut self, dst: &mut [u8]) {
         const LEN: usize = size_of::<[u64; BUF_LEN]>();
-        dst.chunks_exact_mut(LEN).for_each(|cur| {
-            let cur_ref: &mut [u8; LEN] = cur.try_into().unwrap();
-            let temp: &mut [u64; BUF_LEN] = unsafe { transmute(cur_ref) };
-            self.internal.block(temp);
+        dst.chunks_exact_mut(LEN).for_each(|chunk| {
+            let chunk_ref: &mut [u8; LEN] = chunk.try_into().unwrap();
+            let chunk_reinterpreted: &mut [u64; BUF_LEN] = unsafe { transmute(chunk_ref) };
+            self.internal.block(chunk_reinterpreted);
         });
         let chunk = dst.chunks_exact_mut(LEN).into_remainder();
         if chunk.len() != 0 {
             unsafe {
-                #[allow(invalid_value)]
                 let mut data = MaybeUninit::uninit().assume_init();
                 self.internal.block(&mut data);
                 copy(data.as_ptr().cast(), dst.as_mut_ptr(), dst.len());
@@ -37,11 +41,10 @@ impl SecureYARandGenerator for SecureRng {
 
 impl YARandGenerator for SecureRng {
     fn try_new() -> Result<Self, getrandom::Error> {
-        let mut dest = [0; CHACHA_SEED_LEN];
+        let mut dest = unsafe { MaybeUninit::<[u8; CHACHA_SEED_LEN]>::uninit().assume_init() };
         getrandom::fill(&mut dest)?;
         let mut result = SecureRng {
             index: 0,
-            #[allow(invalid_value)]
             buf: unsafe { MaybeUninit::uninit().assume_init() },
             internal: ChaCha::from(dest),
         };

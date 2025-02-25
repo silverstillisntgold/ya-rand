@@ -27,7 +27,7 @@ impl Add for Matrix {
     }
 }
 
-macro_rules! rotate_left {
+macro_rules! rotate_left_epi32 {
     ($value:expr, $LEFT_SHIFT:expr) => {{
         const RIGHT_SHIFT: i32 = i32::BITS as i32 - $LEFT_SHIFT;
         let left_shift = _mm_slli_epi32($value, $LEFT_SHIFT);
@@ -43,19 +43,19 @@ impl Matrix {
             for [a, b, c, d] in self.state.iter_mut() {
                 *a = _mm_add_epi32(*a, *b);
                 *d = _mm_xor_si128(*d, *a);
-                *d = rotate_left!(*d, 16);
+                *d = rotate_left_epi32!(*d, 16);
 
                 *c = _mm_add_epi32(*c, *d);
                 *b = _mm_xor_si128(*b, *c);
-                *b = rotate_left!(*b, 12);
+                *b = rotate_left_epi32!(*b, 12);
 
                 *a = _mm_add_epi32(*a, *b);
                 *d = _mm_xor_si128(*d, *a);
-                *d = rotate_left!(*d, 8);
+                *d = rotate_left_epi32!(*d, 8);
 
                 *c = _mm_add_epi32(*c, *d);
                 *b = _mm_xor_si128(*b, *c);
-                *b = rotate_left!(*b, 7);
+                *b = rotate_left_epi32!(*b, 7);
             }
         }
     }
