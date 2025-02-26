@@ -1,9 +1,6 @@
 #![allow(invalid_value)]
 
-mod avx2;
-//mod neon;
 mod soft;
-mod sse2;
 mod util;
 
 use crate::{SecureYARandGenerator, YARandGenerator};
@@ -16,6 +13,8 @@ use util::*;
 
 cfg_if! {
     if #[cfg(any(target_arch = "x86_64", target_arch = "x86"))] {
+        mod avx2;
+        mod sse2;
         cfg_if! {
             if #[cfg(target_feature = "avx2")] {
                 use avx2::Matrix;
@@ -26,8 +25,8 @@ cfg_if! {
             }
         }
     } else if #[cfg(target_feature = "neon")] {
-        // TODO: neon implementation
-        use soft::Matrix;
+        mod neon;
+        use neon::Matrix;
     } else {
         use soft::Matrix;
     }
