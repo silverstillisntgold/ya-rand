@@ -255,46 +255,52 @@ mod test {
 
     #[test]
     fn text_base64() {
-        text::<Base64>();
+        text::<Base64, ITERATIONS>();
+        text::<Base64, { ITERATIONS - 1 }>();
     }
 
     #[test]
     fn text_base64_url() {
-        text::<Base64URL>();
+        text::<Base64URL, ITERATIONS>();
+        text::<Base64URL, { ITERATIONS - 1 }>();
     }
 
     #[test]
     fn text_base62() {
-        text::<Base62>();
+        text::<Base62, ITERATIONS>();
+        text::<Base62, { ITERATIONS - 1 }>();
     }
 
     #[test]
     fn text_base32() {
-        text::<Base32>();
+        text::<Base32, ITERATIONS>();
+        text::<Base32, { ITERATIONS - 1 }>();
     }
 
     #[test]
     fn text_base32_hex() {
-        text::<Base32Hex>();
+        text::<Base32Hex, ITERATIONS>();
+        text::<Base32Hex, { ITERATIONS - 1 }>();
     }
 
     #[test]
     fn text_base16() {
-        text::<Base16>();
+        text::<Base16, ITERATIONS>();
+        text::<Base16, { ITERATIONS - 1 }>();
     }
 
     #[test]
     fn text_base16_lowercase() {
-        text::<Base16Lowercase>();
+        text::<Base16Lowercase, ITERATIONS>();
+        text::<Base16Lowercase, { ITERATIONS - 1 }>();
     }
 
-    #[inline(always)]
-    fn text<E: Encoder>() {
-        let s = new_rng_secure().text::<E>(ITERATIONS).unwrap();
+    fn text<E: Encoder, const LEN: usize>() {
+        let s = new_rng_secure().text::<E>(LEN).unwrap();
         let distinct_bytes = s.bytes().collect::<BTreeSet<_>>();
         let distinct_chars = s.chars().collect::<BTreeSet<_>>();
 
-        let lengths_are_equal = ITERATIONS == s.len()
+        let lengths_are_equal = LEN == s.len()
             && E::CHARSET.len() == distinct_bytes.len()
             && E::CHARSET.len() == distinct_chars.len();
         assert!(lengths_are_equal);

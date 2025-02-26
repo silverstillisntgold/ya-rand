@@ -1,3 +1,5 @@
+#![allow(invalid_value)]
+
 mod avx2;
 //mod neon;
 mod soft;
@@ -38,7 +40,6 @@ pub struct SecureRng {
 }
 
 impl SecureYARandGenerator for SecureRng {
-    #[allow(invalid_value)]
     #[inline(never)]
     fn fill_bytes(&mut self, dst: &mut [u8]) {
         const LEN: usize = size_of::<[u64; BUF_LEN]>();
@@ -47,19 +48,22 @@ impl SecureYARandGenerator for SecureRng {
             let chunk_reinterpreted: &mut [u64; BUF_LEN] = unsafe { transmute(chunk_ref) };
             self.internal.block(chunk_reinterpreted);
         });
-        let chunk = dst.chunks_exact_mut(LEN).into_remainder();
-        if chunk.len() != 0 {
+        let remaining_chunk = dst.chunks_exact_mut(LEN).into_remainder();
+        if remaining_chunk.len() != 0 {
             unsafe {
                 let mut data = MaybeUninit::uninit().assume_init();
                 self.internal.block(&mut data);
-                copy(data.as_ptr().cast(), dst.as_mut_ptr(), dst.len());
+                copy(
+                    data.as_ptr().cast(),
+                    remaining_chunk.as_mut_ptr(),
+                    remaining_chunk.len(),
+                );
             }
         }
     }
 }
 
 impl YARandGenerator for SecureRng {
-    #[allow(invalid_value)]
     fn try_new() -> Result<Self, getrandom::Error> {
         let mut dest = unsafe { MaybeUninit::<[u8; CHACHA_SEED_LEN]>::uninit().assume_init() };
         getrandom::fill(&mut dest)?;

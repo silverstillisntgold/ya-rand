@@ -5,8 +5,8 @@ use core::arch::x86::*;
 use core::arch::x86_64::*;
 use core::{mem::transmute, ops::Add};
 
-/// Since each avx2 register holds twice the bits,
-/// we only need half the registers of sse2.
+/// Since each avx2 register holds twice the bits, we only
+/// need half the total registers of the sse2 implementation.
 const LOCAL_DEPTH: usize = DEPTH / 2;
 
 #[derive(Clone)]
@@ -69,9 +69,9 @@ impl Matrix {
     fn make_diagonal(&mut self) {
         unsafe {
             for [a, _, c, d] in self.state.iter_mut() {
-                *c = _mm256_shuffle_epi32(*c, 0b_00_11_10_01); // _mm256_SHUFFLE(0, 3, 2, 1)
-                *d = _mm256_shuffle_epi32(*d, 0b_01_00_11_10); // _mm256_SHUFFLE(1, 0, 3, 2)
-                *a = _mm256_shuffle_epi32(*a, 0b_10_01_00_11); // _mm256_SHUFFLE(2, 1, 0, 3)
+                *c = _mm256_shuffle_epi32(*c, 0b_00_11_10_01); // _MM_SHUFFLE(0, 3, 2, 1)
+                *d = _mm256_shuffle_epi32(*d, 0b_01_00_11_10); // _MM_SHUFFLE(1, 0, 3, 2)
+                *a = _mm256_shuffle_epi32(*a, 0b_10_01_00_11); // _MM_SHUFFLE(2, 1, 0, 3)
             }
         }
     }
@@ -80,9 +80,9 @@ impl Matrix {
     fn unmake_diagonal(&mut self) {
         unsafe {
             for [a, _, c, d] in self.state.iter_mut() {
-                *c = _mm256_shuffle_epi32(*c, 0b_10_01_00_11); // _mm256_SHUFFLE(2, 1, 0, 3)
-                *d = _mm256_shuffle_epi32(*d, 0b_01_00_11_10); // _mm256_SHUFFLE(1, 0, 3, 2)
-                *a = _mm256_shuffle_epi32(*a, 0b_00_11_10_01); // _mm256_SHUFFLE(0, 3, 2, 1)
+                *c = _mm256_shuffle_epi32(*c, 0b_10_01_00_11); // _MM_SHUFFLE(2, 1, 0, 3)
+                *d = _mm256_shuffle_epi32(*d, 0b_01_00_11_10); // _MM_SHUFFLE(1, 0, 3, 2)
+                *a = _mm256_shuffle_epi32(*a, 0b_00_11_10_01); // _MM_SHUFFLE(0, 3, 2, 1)
             }
         }
     }
@@ -117,6 +117,11 @@ impl Machine for Matrix {
     #[inline(always)]
     fn fill_block(self, buf: &mut [u64; BUF_LEN]) {
         unsafe {
+            // "WOW, THIS LOOKS LIKE AN ABSOLUTE MESS." It kind of is, but
+            // because of the way we create `Matrix`s from initial `ChaCha`
+            // instances (broadcasting `Row`s into both halves of a __m256i),
+            // we have to manually rearrange our final state(s) to output
+            // the chunks in the correct order.
             *buf = transmute([
                 [
                     _mm256_extracti128_si256(self.state[0][0], 1),

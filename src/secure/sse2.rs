@@ -38,7 +38,6 @@ macro_rules! rotate_left_epi32 {
 }
 
 impl Matrix {
-    /// Just a standard chacha quarter round.
     #[inline(always)]
     fn quarter_round(&mut self) {
         unsafe {

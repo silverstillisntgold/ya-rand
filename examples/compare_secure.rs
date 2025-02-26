@@ -1,7 +1,8 @@
-//! Compares the performance of alternate RNG crates
-//! when filling a slice with random values.
+//! Compares the performance of various RNG crates
+//! when filling a large slice with random values.
 
-use rand::{rngs, Rng, SeedableRng};
+use chacha20::{rand_core::RngCore, ChaCha8Rng};
+use rand::{rngs::StdRng, SeedableRng};
 use std::hint::black_box;
 use std::time::Instant;
 use ya_rand::*;
@@ -10,16 +11,16 @@ const ITERATIONS: usize = 1 << 24;
 
 fn main() {
     let mut v = Box::new_uninit_slice(ITERATIONS);
-    let mut rng = rngs::StdRng::from_rng(&mut rand::rng());
+    let mut rng = SecureStdRng::new();
     let rand = time_in_nanos(move || {
         v.iter_mut().for_each(|v| {
-            v.write(rng.random::<u64>());
+            v.write(rng.u64());
         });
         black_box(v);
     });
 
     let mut v = Box::new_uninit_slice(ITERATIONS);
-    let mut rng = SecureRngChaCha20::new();
+    let mut rng = SecureChaCha20::new();
     let chacha20 = time_in_nanos(move || {
         v.iter_mut().for_each(|v| {
             v.write(rng.u64());
@@ -67,27 +68,37 @@ fn time_in_nanos<F: FnOnce()>(op: F) -> f64 {
     time * 1e9
 }
 
-use chacha20::{rand_core::RngCore, ChaCha8Rng};
+/// Needs a wrapper type because by default `rand` tries
+/// to inline ***EVERYTHING***.
+struct SecureStdRng {
+    internal: StdRng,
+}
 
-#[derive(Debug)]
-pub struct SecureRngChaCha20 {
+impl YARandGenerator for SecureStdRng {
+    fn try_new() -> Result<Self, getrandom::Error> {
+        let mut data = <StdRng as SeedableRng>::Seed::default();
+        getrandom::fill(&mut data)?;
+        let internal = StdRng::from_seed(data);
+        Ok(Self { internal })
+    }
+
+    #[cfg_attr(not(feature = "inline"), inline(never))]
+    #[cfg_attr(feature = "inline", inline(always))]
+    fn u64(&mut self) -> u64 {
+        self.internal.next_u64()
+    }
+}
+
+/// Same rational as `SecureStdRng`.
+struct SecureChaCha20 {
     internal: ChaCha8Rng,
 }
 
-impl YARandGenerator for SecureRngChaCha20 {
+impl YARandGenerator for SecureChaCha20 {
     fn try_new() -> Result<Self, getrandom::Error> {
-        const SEED_LEN: usize = 32;
-        const STREAM_LEN: usize = 12;
-        // Using a combined array so we only need a single syscall.
-        let mut data = [0; SEED_LEN + STREAM_LEN];
+        let mut data = <ChaCha8Rng as SeedableRng>::Seed::default();
         getrandom::fill(&mut data)?;
-        // Both of these unwraps get optimized out.
-        let seed: [u8; SEED_LEN] = data[..SEED_LEN].try_into().unwrap();
-        let stream: [u8; STREAM_LEN] = data[SEED_LEN..].try_into().unwrap();
-        let mut internal = ChaCha8Rng::from_seed(seed);
-        // Randomizing the stream number further decreases the
-        // already-low odds of two instances colliding.
-        internal.set_stream(stream);
+        let internal = ChaCha8Rng::from_seed(data);
         Ok(Self { internal })
     }
 

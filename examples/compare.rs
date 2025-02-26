@@ -1,5 +1,5 @@
-//! Compares the performance of alternate RNG crates
-//! when filling a slice with random values.
+//! Compares the performance of various RNG crates
+//! when filling a large slice with random values.
 
 use rand::{rngs, Rng, SeedableRng};
 use rayon::prelude::*;

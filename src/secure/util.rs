@@ -1,12 +1,12 @@
-use core::ops::Add;
 use core::{
     marker::PhantomData,
     mem::{transmute, MaybeUninit},
+    ops::Add,
 };
 
 /// "expand 32-byte k", the standard constant for ChaCha.
-pub const ROW_A: [i32; 4] = [0x6170_7865, 0x3320_646e, 0x7962_2d32, 0x6b20_6574];
-/// Normally, ChaCha outputs only 16 `i32`'s, but we process in
+pub const ROW_A: [u32; 4] = [0x6170_7865, 0x3320_646e, 0x7962_2d32, 0x6b20_6574];
+/// Normally, ChaCha outputs only 16 `u32`'s, but we process in
 /// chunks of 4 and output `u64`'s.
 pub const BUF_LEN: usize = 16 * 4 / 2;
 /// Since we process in chunks of 4, the counter of the base
@@ -15,14 +15,17 @@ pub const DEPTH: usize = 4;
 
 /// 4 double rounds makes this a ChaCha8 implementation.
 /// Increasing this would be trivial if ever needed, but the
-/// test datastreams would need to be updated as well.
+/// test keystreams would need to be updated as well.
+///
+/// Not at all related to `DEPTH`, they just happen to be
+/// the same in this case.
 pub const CHACHA_DOUBLE_ROUNDS: usize = 4;
 pub const CHACHA_SEED_LEN: usize = size_of::<ChaCha<super::Matrix>>();
 
 /// Defines the interface that concrete implementations need to
 /// implement to process the state of a `ChaCha` instance.
 ///
-/// Instances should always process `DEPTH` amount of chacha blocks.
+/// Instances should always process 4 chacha blocks.
 pub trait Machine: Add<Output = Self> + Clone {
     /// Uses the current `ChaCha` state to create a new `Machine`,
     /// which will internally handle it's own counters.
@@ -31,8 +34,7 @@ pub trait Machine: Add<Output = Self> + Clone {
     /// Process a standard double round of the ChaCha algorithm.
     ///
     /// The way that the `Machine` goes about this is completely up
-    /// to the implementation, but the result should always be able
-    /// to pass all the test.
+    /// to the implementation, so long as the results are correct.
     fn double_round(&mut self);
 
     /// Fills `buf` with the output of four processed ChaCha blocks.
@@ -42,16 +44,16 @@ pub trait Machine: Add<Output = Self> + Clone {
 }
 
 /// Wrapper for the data of a `ChaCha` row. In a reference
-/// implementation this would just be the `i32x4` field, but having
-/// `i64x2` is useful for working with a 64-bit counter and `i8x16`
-/// is useful for testing. `i16x8` is included for completeness.
+/// implementation this would just be the `u32x4` field, but having
+/// `u64x2` is useful for working with a 64-bit counter and `u8x16`
+/// is useful for some tests. `u16x8` is included for completeness.
 #[allow(unused)]
 #[derive(Clone, Copy)]
 pub union Row {
-    pub i8x16: [i8; 16],
-    pub i16x8: [i16; 8],
-    pub i32x4: [i32; 4],
-    pub i64x2: [i64; 2],
+    pub u8x16: [u8; 16],
+    pub u16x8: [u16; 8],
+    pub u32x4: [u32; 4],
+    pub u64x2: [u64; 2],
 }
 
 /// Long-term storage for the state of a chacha matrix.
@@ -83,6 +85,15 @@ impl<M> From<[u8; CHACHA_SEED_LEN]> for ChaCha<M> {
 }
 
 impl<M: Machine> ChaCha<M> {
+    /// Utility for setting all bytes when testing.
+    #[cfg(test)]
+    fn broadcast<const VALUE: u64>(&mut self) {
+        self.row_b.u64x2 = [VALUE, VALUE];
+        self.row_c.u64x2 = [VALUE, VALUE];
+        // Tests always expect the counter to start at 0.
+        self.row_d.u64x2 = [0, VALUE];
+    }
+
     /// Computes 4 blocks of chacha and fills `buf` with the output.
     ///
     /// This is the inline boundary. Everything beneath this should be
@@ -96,7 +107,7 @@ impl<M: Machine> ChaCha<M> {
             // Increment 64-bit counter by `DEPTH`. Since we randomize
             // the counter, it's important that this uses `wrapping_add`,
             // otherwise debug builds might fuck themselves over.
-            self.row_d.i64x2[0] = self.row_d.i64x2[0].wrapping_add(DEPTH as i64);
+            self.row_d.u64x2[0] = self.row_d.u64x2[0].wrapping_add(DEPTH as u64);
         }
         for _ in 0..CHACHA_DOUBLE_ROUNDS {
             state.double_round();
@@ -109,13 +120,14 @@ impl<M: Machine> ChaCha<M> {
 #[cfg(test)]
 mod test {
     //! All keystreams for these tests come from [here].
+    //! If the amount of double rounds is ever increased, all the
+    //! keystream blocks need to be updated.
     //!
     //! [here]:
     //! https://github.com/secworks/chacha_testvectors/blob/master/src/chacha_testvectors.txt
 
     use super::*;
     use crate::secure::*;
-    use core::mem::transmute;
 
     #[test]
     fn correct_constant() {
@@ -149,36 +161,78 @@ mod test {
 
     fn chacha_test<M: Machine>() {
         let reset = || ChaCha::<M>::default();
-        let mut data = [0; BUF_LEN];
+        let mut buf = [0; BUF_LEN];
 
         let mut state = reset();
-        state.block(&mut data);
-        all_bytes_zeroed(data);
+        state.block(&mut buf);
+        all_bytes_zeroed(buf);
 
         state = reset();
         unsafe {
-            state.row_b.i8x16[0] = 1;
+            // Rows b and c contain the key.
+            state.row_b.u8x16[0] = 1;
         }
-        state.block(&mut data);
-        first_key_byte_is_1(data);
+        state.block(&mut buf);
+        first_key_byte_is_1(buf);
 
         state = reset();
         unsafe {
-            state.row_d.i8x16[8] = 1;
+            // The later half of row d contains the nonce.
+            // Indexs 0..=7 are the counter.
+            state.row_d.u8x16[8] = 1;
         }
-        state.block(&mut data);
-        first_nonce_byte_is_1(data);
+        state.block(&mut buf);
+        first_nonce_byte_is_1(buf);
 
-        const NOT_BITS: i64 = !0;
-        state.row_b.i64x2 = [NOT_BITS, NOT_BITS];
-        state.row_c.i64x2 = [NOT_BITS, NOT_BITS];
-        // Tests always expect the counter to start at 0.
-        state.row_d.i64x2 = [0, NOT_BITS];
-        state.block(&mut data);
-        all_bytes_set(data);
+        const NOT_BITS: u64 = !0;
+        state.broadcast::<NOT_BITS>();
+        state.block(&mut buf);
+        all_bits_set(buf);
+
+        const EVEN_BITS: u64 = 0x5555555555555555;
+        state.broadcast::<EVEN_BITS>();
+        state.block(&mut buf);
+        all_even_bits_set(buf);
+
+        const ODD_BITS: u64 = 0xAAAAAAAAAAAAAAAA;
+        state.broadcast::<ODD_BITS>();
+        state.block(&mut buf);
+        all_odd_bits_set(buf);
+
+        // Increasing then decreasing
+        state.row_b.u8x16 = [
+            0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd,
+            0xee, 0xff,
+        ];
+        state.row_c.u8x16 = [
+            0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22,
+            0x11, 0x00,
+        ];
+        // Increasing and decreasing
+        state.row_d.u8x16 = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0x0f, 0x1e, 0x2d, 0x3c, 0x4b, 0x5a, 0x69, 0x78,
+        ];
+        state.block(&mut buf);
+        sequence_pattern(buf);
+
+        // 'All your base are belong to us!
+        state.row_b.u8x16 = [
+            0xc4, 0x6e, 0xc1, 0xb1, 0x8c, 0xe8, 0xa8, 0x78, 0x72, 0x5a, 0x37, 0xe7, 0x80, 0xdf,
+            0xb7, 0x35,
+        ];
+        state.row_c.u8x16 = [
+            0x1f, 0x68, 0xed, 0x2e, 0x19, 0x4c, 0x79, 0xfb, 0xc6, 0xae, 0xbe, 0xe1, 0xa6, 0x67,
+            0x97, 0x5d,
+        ];
+        // IETF2013
+        state.row_d.u8x16 = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0x1a, 0xda, 0x31, 0xd5, 0xcf, 0x68, 0x82, 0x21,
+        ];
+        state.block(&mut buf);
+        based(buf);
     }
 
-    fn all_bytes_zeroed(data: [u64; BUF_LEN]) {
+    fn all_bytes_zeroed(buf: [u64; BUF_LEN]) {
         const KEYSTREAM_BLOCK_0: [u8; 64] = [
             0x3e, 0x00, 0xef, 0x2f, 0x89, 0x5f, 0x40, 0xd6, 0x7f, 0x5b, 0xb8, 0xe8, 0x1f, 0x09,
             0xa5, 0xa1, 0x2c, 0x84, 0x0e, 0xc3, 0xce, 0x9a, 0x7f, 0x3b, 0x18, 0x1b, 0xe1, 0x88,
@@ -193,12 +247,10 @@ mod test {
             0x6f, 0x56, 0x8b, 0x87, 0x2a, 0x65, 0xa0, 0x8a, 0xbf, 0x25, 0x1d, 0xeb, 0x21, 0xbb,
             0x4b, 0x56, 0xe5, 0xd8, 0x82, 0x1e, 0x68, 0xaa,
         ];
-        let (block_0, block_1) = fetch_blocks(data);
-        assert!(block_0 == KEYSTREAM_BLOCK_0);
-        assert!(block_1 == KEYSTREAM_BLOCK_1);
+        assert_blocks_match(&buf, &KEYSTREAM_BLOCK_0, &KEYSTREAM_BLOCK_1);
     }
 
-    fn first_key_byte_is_1(data: [u64; BUF_LEN]) {
+    fn first_key_byte_is_1(buf: [u64; BUF_LEN]) {
         const KEYSTREAM_BLOCK_0: [u8; 64] = [
             0xcf, 0x5e, 0xe9, 0xa0, 0x49, 0x4a, 0xa9, 0x61, 0x3e, 0x05, 0xd5, 0xed, 0x72, 0x5b,
             0x80, 0x4b, 0x12, 0xf4, 0xa4, 0x65, 0xee, 0x63, 0x5a, 0xcc, 0x3a, 0x31, 0x1d, 0xe8,
@@ -213,12 +265,10 @@ mod test {
             0xdf, 0xe2, 0x19, 0xcf, 0x0e, 0xc1, 0x32, 0xa6, 0xcd, 0x4d, 0xc0, 0x67, 0x39, 0x2e,
             0x67, 0x98, 0x2f, 0xe5, 0x32, 0x78, 0xc0, 0xb4,
         ];
-        let (block_0, block_1) = fetch_blocks(data);
-        assert!(block_0 == KEYSTREAM_BLOCK_0);
-        assert!(block_1 == KEYSTREAM_BLOCK_1);
+        assert_blocks_match(&buf, &KEYSTREAM_BLOCK_0, &KEYSTREAM_BLOCK_1);
     }
 
-    fn first_nonce_byte_is_1(data: [u64; BUF_LEN]) {
+    fn first_nonce_byte_is_1(buf: [u64; BUF_LEN]) {
         const KEYSTREAM_BLOCK_0: [u8; 64] = [
             0x2b, 0x8f, 0x4b, 0xb3, 0x79, 0x83, 0x06, 0xca, 0x51, 0x30, 0xd4, 0x7c, 0x4f, 0x8d,
             0x4e, 0xd1, 0x3a, 0xa0, 0xed, 0xcc, 0xc1, 0xbe, 0x69, 0x42, 0x09, 0x0f, 0xae, 0xec,
@@ -233,12 +283,10 @@ mod test {
             0x73, 0xc8, 0xea, 0xcf, 0xa5, 0x43, 0xb3, 0x8f, 0x28, 0x9d, 0x06, 0x5a, 0xb2, 0xf3,
             0x03, 0x2d, 0x37, 0x7b, 0x8c, 0x37, 0xfe, 0x46,
         ];
-        let (block_0, block_1) = fetch_blocks(data);
-        assert!(block_0 == KEYSTREAM_BLOCK_0);
-        assert!(block_1 == KEYSTREAM_BLOCK_1);
+        assert_blocks_match(&buf, &KEYSTREAM_BLOCK_0, &KEYSTREAM_BLOCK_1);
     }
 
-    fn all_bytes_set(data: [u64; BUF_LEN]) {
+    fn all_bits_set(buf: [u64; BUF_LEN]) {
         const KEYSTREAM_BLOCK_0: [u8; 64] = [
             0xe1, 0x63, 0xbb, 0xf8, 0xc9, 0xa7, 0x39, 0xd1, 0x89, 0x25, 0xee, 0x83, 0x62, 0xda,
             0xd2, 0xcd, 0xc9, 0x73, 0xdf, 0x05, 0x22, 0x5a, 0xfb, 0x2a, 0xa2, 0x63, 0x96, 0xf2,
@@ -253,18 +301,102 @@ mod test {
             0x76, 0x94, 0xcb, 0x28, 0x02, 0x4c, 0xd9, 0x6d, 0x34, 0x98, 0x36, 0x1e, 0xdb, 0x17,
             0x85, 0xaf, 0x75, 0x2d, 0x18, 0x7a, 0xb5, 0x4b,
         ];
-        let (block_0, block_1) = fetch_blocks(data);
-        assert!(block_0 == KEYSTREAM_BLOCK_0);
-        assert!(block_1 == KEYSTREAM_BLOCK_1);
+        assert_blocks_match(&buf, &KEYSTREAM_BLOCK_0, &KEYSTREAM_BLOCK_1);
+    }
+
+    fn all_even_bits_set(buf: [u64; BUF_LEN]) {
+        const KEYSTREAM_BLOCK_0: [u8; 64] = [
+            0x7c, 0xb7, 0x82, 0x14, 0xe4, 0xd3, 0x46, 0x5b, 0x6d, 0xc6, 0x2c, 0xf7, 0xa1, 0x53,
+            0x8c, 0x88, 0x99, 0x69, 0x52, 0xb4, 0xfb, 0x72, 0xcb, 0x61, 0x05, 0xf1, 0x24, 0x3c,
+            0xe3, 0x44, 0x2e, 0x29, 0x75, 0xa5, 0x9e, 0xbc, 0xd2, 0xb2, 0xa5, 0x98, 0x29, 0x0d,
+            0x75, 0x38, 0x49, 0x1f, 0xe6, 0x5b, 0xdb, 0xfe, 0xfd, 0x06, 0x0d, 0x88, 0x79, 0x81,
+            0x20, 0xa7, 0x0d, 0x04, 0x9d, 0xc2, 0x67, 0x7d,
+        ];
+        const KEYSTREAM_BLOCK_1: [u8; 64] = [
+            0xd4, 0x8f, 0xf5, 0xa2, 0x51, 0x3e, 0x49, 0x7a, 0x5d, 0x54, 0x80, 0x2d, 0x74, 0x84,
+            0xc4, 0xf1, 0x08, 0x39, 0x44, 0xd8, 0xd0, 0xd1, 0x4d, 0x64, 0x82, 0xce, 0x09, 0xf7,
+            0xe5, 0xeb, 0xf2, 0x0b, 0x29, 0x80, 0x7d, 0x62, 0xc3, 0x18, 0x74, 0xd0, 0x2f, 0x5d,
+            0x3c, 0xc8, 0x53, 0x81, 0xa7, 0x45, 0xec, 0xbc, 0x60, 0x52, 0x52, 0x05, 0xe3, 0x00,
+            0xa7, 0x69, 0x61, 0xbf, 0xe5, 0x1a, 0xc0, 0x7c,
+        ];
+        assert_blocks_match(&buf, &KEYSTREAM_BLOCK_0, &KEYSTREAM_BLOCK_1);
+    }
+
+    fn all_odd_bits_set(buf: [u64; BUF_LEN]) {
+        const KEYSTREAM_BLOCK_0: [u8; 64] = [
+            0x40, 0xf9, 0xab, 0x86, 0xc8, 0xf9, 0xa1, 0xa0, 0xcd, 0xc0, 0x5a, 0x75, 0xe5, 0x53,
+            0x1b, 0x61, 0x2d, 0x71, 0xef, 0x7f, 0x0c, 0xf9, 0xe3, 0x87, 0xdf, 0x6e, 0xd6, 0x97,
+            0x2f, 0x0a, 0xae, 0x21, 0x31, 0x1a, 0xa5, 0x81, 0xf8, 0x16, 0xc9, 0x0e, 0x8a, 0x99,
+            0xde, 0x99, 0x0b, 0x6b, 0x95, 0xaa, 0xc9, 0x24, 0x50, 0xf4, 0xe1, 0x12, 0x71, 0x26,
+            0x67, 0xb8, 0x04, 0xc9, 0x9e, 0x9c, 0x6e, 0xda,
+        ];
+        const KEYSTREAM_BLOCK_1: [u8; 64] = [
+            0xf8, 0xd1, 0x44, 0xf5, 0x60, 0xc8, 0xc0, 0xea, 0x36, 0x88, 0x0d, 0x3b, 0x77, 0x87,
+            0x4c, 0x9a, 0x91, 0x03, 0xd1, 0x47, 0xf6, 0xde, 0xd3, 0x86, 0x28, 0x48, 0x01, 0xa4,
+            0xee, 0x15, 0x8e, 0x5e, 0xa4, 0xf9, 0xc0, 0x93, 0xfc, 0x55, 0xfd, 0x34, 0x4c, 0x33,
+            0x34, 0x9d, 0xc5, 0xb6, 0x99, 0xe2, 0x1d, 0xc8, 0x3b, 0x42, 0x96, 0xf9, 0x2e, 0xe3,
+            0xec, 0xab, 0xf3, 0xd5, 0x1f, 0x95, 0xfe, 0x3f,
+        ];
+        assert_blocks_match(&buf, &KEYSTREAM_BLOCK_0, &KEYSTREAM_BLOCK_1);
+    }
+
+    fn sequence_pattern(buf: [u64; BUF_LEN]) {
+        const KEYSTREAM_BLOCK_0: [u8; 64] = [
+            0xdb, 0x43, 0xad, 0x9d, 0x1e, 0x84, 0x2d, 0x12, 0x72, 0xe4, 0x53, 0x0e, 0x27, 0x6b,
+            0x3f, 0x56, 0x8f, 0x88, 0x59, 0xb3, 0xf7, 0xcf, 0x6d, 0x9d, 0x2c, 0x74, 0xfa, 0x53,
+            0x80, 0x8c, 0xb5, 0x15, 0x7a, 0x8e, 0xbf, 0x46, 0xad, 0x3d, 0xcc, 0x4b, 0x6c, 0x7d,
+            0xad, 0xde, 0x13, 0x17, 0x84, 0xb0, 0x12, 0x0e, 0x0e, 0x22, 0xf6, 0xd5, 0xf9, 0xff,
+            0xa7, 0x40, 0x7d, 0x4a, 0x21, 0xb6, 0x95, 0xd9,
+        ];
+        const KEYSTREAM_BLOCK_1: [u8; 64] = [
+            0xc5, 0xdd, 0x30, 0xbf, 0x55, 0x61, 0x2f, 0xab, 0x9b, 0xdd, 0x11, 0x89, 0x20, 0xc1,
+            0x98, 0x16, 0x47, 0x0c, 0x7f, 0x5d, 0xcd, 0x42, 0x32, 0x5d, 0xbb, 0xed, 0x8c, 0x57,
+            0xa5, 0x62, 0x81, 0xc1, 0x44, 0xcb, 0x0f, 0x03, 0xe8, 0x1b, 0x30, 0x04, 0x62, 0x4e,
+            0x06, 0x50, 0xa1, 0xce, 0x5a, 0xfa, 0xf9, 0xa7, 0xcd, 0x81, 0x63, 0xf6, 0xdb, 0xd7,
+            0x26, 0x02, 0x25, 0x7d, 0xd9, 0x6e, 0x47, 0x1e,
+        ];
+        assert_blocks_match(&buf, &KEYSTREAM_BLOCK_0, &KEYSTREAM_BLOCK_1);
+    }
+
+    fn based(buf: [u64; BUF_LEN]) {
+        const KEYSTREAM_BLOCK_0: [u8; 64] = [
+            0x83, 0x87, 0x51, 0xb4, 0x2d, 0x8d, 0xdd, 0x8a, 0x3d, 0x77, 0xf4, 0x88, 0x25, 0xa2,
+            0xba, 0x75, 0x2c, 0xf4, 0x04, 0x7c, 0xb3, 0x08, 0xa5, 0x97, 0x8e, 0xf2, 0x74, 0x97,
+            0x3b, 0xe3, 0x74, 0xc9, 0x6a, 0xd8, 0x48, 0x06, 0x58, 0x71, 0x41, 0x7b, 0x08, 0xf0,
+            0x34, 0xe6, 0x81, 0xfe, 0x46, 0xa9, 0x3f, 0x7d, 0x5c, 0x61, 0xd1, 0x30, 0x66, 0x14,
+            0xd4, 0xaa, 0xf2, 0x57, 0xa7, 0xcf, 0xf0, 0x8b,
+        ];
+        const KEYSTREAM_BLOCK_1: [u8; 64] = [
+            0x16, 0xf2, 0xfd, 0xa1, 0x70, 0xcc, 0x18, 0xa4, 0xb5, 0x8a, 0x26, 0x67, 0xed, 0x96,
+            0x27, 0x74, 0xaf, 0x79, 0x2a, 0x6e, 0x7f, 0x3c, 0x77, 0x99, 0x25, 0x40, 0x71, 0x1a,
+            0x7a, 0x13, 0x6d, 0x7e, 0x8a, 0x2f, 0x8d, 0x3f, 0x93, 0x81, 0x67, 0x09, 0xd4, 0x5a,
+            0x3f, 0xa5, 0xf8, 0xce, 0x72, 0xfd, 0xe1, 0x5b, 0xe7, 0xb8, 0x41, 0xac, 0xba, 0x3a,
+            0x2a, 0xbd, 0x55, 0x72, 0x28, 0xd9, 0xfe, 0x4f,
+        ];
+        assert_blocks_match(&buf, &KEYSTREAM_BLOCK_0, &KEYSTREAM_BLOCK_1);
     }
 
     // We're only able to retrieve chacha output in blocks of 4, but we
-    // only bother testing the first two blocks, discarding the rest.
-    fn fetch_blocks(data: [u64; BUF_LEN]) -> ([u8; 64], [u8; 64]) {
-        const BYTE_LEN: usize = size_of::<[u64; BUF_LEN]>();
-        let stream_as_bytes: [u8; BYTE_LEN] = unsafe { transmute(data) };
-        let block_0: [u8; 64] = stream_as_bytes[..64].try_into().unwrap();
-        let block_1: [u8; 64] = stream_as_bytes[64..128].try_into().unwrap();
-        (block_0, block_1)
+    // only test the first 2 blocks, discarding the rest.
+    //
+    // Only checking the first 2 is just as good as checking many more,
+    // since if our implementation were even slightly incorrect the output
+    // would diverge almost instantly. Even more so because we test against
+    // multiple keystreams.
+    fn assert_blocks_match(buf: &[u64], block_0: &[u8], block_1: &[u8]) {
+        // Sanity checks
+        assert!(buf.len() == BUF_LEN);
+        assert!(block_0.len() == 64);
+        assert!(block_1.len() == 64);
+
+        // Reinterpret &[u64] as &[u8]
+        let buf = unsafe {
+            let data = buf.as_ptr().cast::<u8>();
+            let len = buf.len() * size_of::<u64>();
+            core::slice::from_raw_parts(data, len)
+        };
+        // Compare chacha output against expected results
+        assert!(buf[..64] == *block_0);
+        assert!(buf[64..128] == *block_1);
     }
 }
