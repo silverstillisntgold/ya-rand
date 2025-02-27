@@ -69,13 +69,11 @@ impl Machine for Matrix {
 
     #[inline(always)]
     fn double_round(&mut self) {
-        // Column (even) rounds
         self.quarter_round(0, 4, 8, 12);
         self.quarter_round(1, 5, 9, 13);
         self.quarter_round(2, 6, 10, 14);
         self.quarter_round(3, 7, 11, 15);
 
-        // Diagonal (odd) rounds
         self.quarter_round(0, 5, 10, 15);
         self.quarter_round(1, 6, 11, 12);
         self.quarter_round(2, 7, 8, 13);

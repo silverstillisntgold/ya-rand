@@ -30,7 +30,7 @@ impl Add for Matrix {
 /// enough that I won't hold it against them.
 macro_rules! rotate_left_epi32 {
     ($value:expr, $LEFT_SHIFT:expr) => {{
-        const RIGHT_SHIFT: i32 = i32::BITS as i32 - $LEFT_SHIFT;
+        const RIGHT_SHIFT: i32 = u32::BITS as i32 - $LEFT_SHIFT;
         let left_shift = _mm_slli_epi32($value, $LEFT_SHIFT);
         let right_shift = _mm_srli_epi32($value, RIGHT_SHIFT);
         _mm_or_si128(left_shift, right_shift)

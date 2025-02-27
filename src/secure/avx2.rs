@@ -34,7 +34,7 @@ impl Add for Matrix {
 /// retards didn't give avx2 rotate instructions lol.
 macro_rules! rotate_left_epi32 {
     ($value:expr, $LEFT_SHIFT:expr) => {{
-        const RIGHT_SHIFT: i32 = i32::BITS as i32 - $LEFT_SHIFT;
+        const RIGHT_SHIFT: i32 = u32::BITS as i32 - $LEFT_SHIFT;
         let left_shift = _mm256_slli_epi32($value, $LEFT_SHIFT);
         let right_shift = _mm256_srli_epi32($value, RIGHT_SHIFT);
         _mm256_or_si256(left_shift, right_shift)
