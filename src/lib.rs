@@ -185,7 +185,7 @@ pub mod ya_rand_encoding {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use std::collections::BTreeSet;
     use ya_rand_encoding::*;

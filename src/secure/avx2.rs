@@ -7,11 +7,11 @@ use core::{mem::transmute, ops::Add};
 
 /// Since each avx2 register holds twice the bits, we only
 /// need half the total registers of the sse2 implementation.
-const LOCAL_DEPTH: usize = DEPTH / 2;
+const HALF_DEPTH: usize = DEPTH / 2;
 
 #[derive(Clone)]
 pub struct Matrix {
-    state: [[__m256i; 4]; LOCAL_DEPTH],
+    state: [[__m256i; 4]; HALF_DEPTH],
 }
 
 impl Add for Matrix {
@@ -30,8 +30,6 @@ impl Add for Matrix {
     }
 }
 
-/// Need a custom implementation because for some reason the
-/// retards didn't give avx2 rotate instructions lol.
 macro_rules! rotate_left_epi32 {
     ($value:expr, $LEFT_SHIFT:expr) => {{
         const RIGHT_SHIFT: i32 = u32::BITS as i32 - $LEFT_SHIFT;
@@ -69,9 +67,9 @@ impl Matrix {
     fn make_diagonal(&mut self) {
         unsafe {
             for [a, _, c, d] in self.state.iter_mut() {
-                *c = _mm256_shuffle_epi32(*c, 0b_00_11_10_01); // _MM_SHUFFLE(0, 3, 2, 1)
-                *d = _mm256_shuffle_epi32(*d, 0b_01_00_11_10); // _MM_SHUFFLE(1, 0, 3, 2)
-                *a = _mm256_shuffle_epi32(*a, 0b_10_01_00_11); // _MM_SHUFFLE(2, 1, 0, 3)
+                *c = _mm256_shuffle_epi32(*c, 0b_00_11_10_01);
+                *d = _mm256_shuffle_epi32(*d, 0b_01_00_11_10);
+                *a = _mm256_shuffle_epi32(*a, 0b_10_01_00_11);
             }
         }
     }
@@ -80,9 +78,9 @@ impl Matrix {
     fn unmake_diagonal(&mut self) {
         unsafe {
             for [a, _, c, d] in self.state.iter_mut() {
-                *c = _mm256_shuffle_epi32(*c, 0b_10_01_00_11); // _MM_SHUFFLE(2, 1, 0, 3)
-                *d = _mm256_shuffle_epi32(*d, 0b_01_00_11_10); // _MM_SHUFFLE(1, 0, 3, 2)
-                *a = _mm256_shuffle_epi32(*a, 0b_00_11_10_01); // _MM_SHUFFLE(0, 3, 2, 1)
+                *c = _mm256_shuffle_epi32(*c, 0b_10_01_00_11);
+                *d = _mm256_shuffle_epi32(*d, 0b_01_00_11_10);
+                *a = _mm256_shuffle_epi32(*a, 0b_00_11_10_01);
             }
         }
     }
@@ -92,13 +90,14 @@ impl Machine for Matrix {
     #[inline(always)]
     fn new(state: &ChaCha<Self>) -> Self {
         unsafe {
+            // TODO: Try using aligned loads.
             let mut state = Matrix {
                 state: [[
                     _mm256_broadcastsi128_si256(transmute(ROW_A)),
                     _mm256_broadcastsi128_si256(transmute(state.row_b)),
                     _mm256_broadcastsi128_si256(transmute(state.row_c)),
                     _mm256_broadcastsi128_si256(transmute(state.row_d)),
-                ]; LOCAL_DEPTH],
+                ]; HALF_DEPTH],
             };
             state.state[0][3] = _mm256_add_epi64(state.state[0][3], _mm256_set_epi64x(0, 0, 0, 1));
             state.state[1][3] = _mm256_add_epi64(state.state[1][3], _mm256_set_epi64x(0, 2, 0, 3));
@@ -108,7 +107,9 @@ impl Machine for Matrix {
 
     #[inline(always)]
     fn double_round(&mut self) {
+        // Column rounds
         self.quarter_round();
+        // Diagonal rounds
         self.make_diagonal();
         self.quarter_round();
         self.unmake_diagonal();
@@ -117,11 +118,11 @@ impl Machine for Matrix {
     #[inline(always)]
     fn fill_block(self, buf: &mut [u64; BUF_LEN]) {
         unsafe {
-            // "WOW, THIS LOOKS LIKE AN ABSOLUTE MESS." It kind of is, but
-            // because of the way we create `Matrix`s from initial `ChaCha`
-            // instances (broadcasting `Row`s into both halves of a __m256i),
-            // we have to manually rearrange our final state(s) to output
-            // the chunks in the correct order.
+            // "WOW, THIS LOOKS LIKE AN ABSOLUTE MESS!!" It kind of is, but
+            // because of the way we create `Matrix`s from the initial `ChaCha`
+            // instance (broadcasting `Row`s into both halves of an `__m256i`),
+            // we have to manually rearrange our final state(s) to output the
+            // computed chacha blocks in the correct order.
             *buf = transmute([
                 [
                     _mm256_extracti128_si256(self.state[0][0], 1),

@@ -26,8 +26,6 @@ impl Add for Matrix {
     }
 }
 
-/// Need a custom implementation for rotation. SSE2 is old
-/// enough that I won't hold it against them.
 macro_rules! rotate_left_epi32 {
     ($value:expr, $LEFT_SHIFT:expr) => {{
         const RIGHT_SHIFT: i32 = u32::BITS as i32 - $LEFT_SHIFT;
@@ -65,9 +63,9 @@ impl Matrix {
     fn make_diagonal(&mut self) {
         unsafe {
             for [a, _, c, d] in self.state.iter_mut() {
-                *c = _mm_shuffle_epi32(*c, 0b_00_11_10_01); // _MM_SHUFFLE(0, 3, 2, 1)
-                *d = _mm_shuffle_epi32(*d, 0b_01_00_11_10); // _MM_SHUFFLE(1, 0, 3, 2)
-                *a = _mm_shuffle_epi32(*a, 0b_10_01_00_11); // _MM_SHUFFLE(2, 1, 0, 3)
+                *c = _mm_shuffle_epi32(*c, 0b_00_11_10_01);
+                *d = _mm_shuffle_epi32(*d, 0b_01_00_11_10);
+                *a = _mm_shuffle_epi32(*a, 0b_10_01_00_11);
             }
         }
     }
@@ -76,9 +74,9 @@ impl Matrix {
     fn unmake_diagonal(&mut self) {
         unsafe {
             for [a, _, c, d] in self.state.iter_mut() {
-                *c = _mm_shuffle_epi32(*c, 0b_10_01_00_11); // _MM_SHUFFLE(2, 1, 0, 3)
-                *d = _mm_shuffle_epi32(*d, 0b_01_00_11_10); // _MM_SHUFFLE(1, 0, 3, 2)
-                *a = _mm_shuffle_epi32(*a, 0b_00_11_10_01); // _MM_SHUFFLE(0, 3, 2, 1)
+                *c = _mm_shuffle_epi32(*c, 0b_10_01_00_11);
+                *d = _mm_shuffle_epi32(*d, 0b_01_00_11_10);
+                *a = _mm_shuffle_epi32(*a, 0b_00_11_10_01);
             }
         }
     }
@@ -88,6 +86,7 @@ impl Machine for Matrix {
     #[inline(always)]
     fn new(state: &ChaCha<Self>) -> Self {
         unsafe {
+            // TODO: Try using aligned loads.
             let mut state = Matrix {
                 state: [[
                     transmute(ROW_A),
@@ -105,7 +104,9 @@ impl Machine for Matrix {
 
     #[inline(always)]
     fn double_round(&mut self) {
+        // Column rounds
         self.quarter_round();
+        // Diagonal rounds
         self.make_diagonal();
         self.quarter_round();
         self.unmake_diagonal();

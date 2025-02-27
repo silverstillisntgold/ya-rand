@@ -26,7 +26,6 @@ impl Add for Matrix {
     }
 }
 
-/// Bruh not even neon supports rotation wtf.
 macro_rules! rotate_left_epi32 {
     ($value:expr, $LEFT_SHIFT:expr) => {{
         const RIGHT_SHIFT: i32 = u32::BITS as i32 - $LEFT_SHIFT;
@@ -37,7 +36,6 @@ macro_rules! rotate_left_epi32 {
 }
 
 impl Matrix {
-    /// Just a standard chacha quarter round.
     #[inline(always)]
     fn quarter_round(&mut self) {
         unsafe {
@@ -88,6 +86,7 @@ impl Machine for Matrix {
     #[inline(always)]
     fn new(state: &ChaCha<Self>) -> Self {
         unsafe {
+            // TODO: Try using aligned loads.
             let mut state = Matrix {
                 state: [[
                     transmute(ROW_A),
@@ -115,8 +114,9 @@ impl Machine for Matrix {
 
     #[inline(always)]
     fn double_round(&mut self) {
+        // Column rounds
         self.quarter_round();
-
+        // Diagonal rounds
         self.make_diagonal();
         self.quarter_round();
         self.unmake_diagonal();

@@ -1,3 +1,8 @@
+/*!
+TODO: Module level documentation explaining approach to vectorized implementations
+and optimizations.
+*/
+
 #![allow(invalid_value)]
 
 mod soft;
@@ -39,7 +44,7 @@ pub struct SecureRng {
 }
 
 impl SecureYARandGenerator for SecureRng {
-    #[inline(never)]
+    #[inline]
     fn fill_bytes(&mut self, dst: &mut [u8]) {
         const LEN: usize = size_of::<[u64; BUF_LEN]>();
         dst.chunks_exact_mut(LEN).for_each(|chunk| {

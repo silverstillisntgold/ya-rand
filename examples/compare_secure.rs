@@ -48,11 +48,12 @@ fn main() {
 
     println!(
         "Filling a slice with {} values || Average nanoseconds per value generated:\n\
+         (all generators obey the same inlining rules)\n\
          ----------------------------------------------------------------\n\
          `rand` average time:             {:>5.2}\n\
          `chacha20` average time:         {:>5.2}\n\
-         `ya-rand` (secure) average time: {:>5.2}\n\
-         `ya-rand` average time:          {:>5.2}\n\
+         `ya-rand` (secure) average time: {:>5.2} <-- You are here\n\
+         `ya-rand` average time:          {:>5.2} <-- and here\n\
          ----------------------------------------------------------------\n",
         ITERATIONS, rand, chacha20, ya_rand_secure, ya_rand
     );
@@ -89,7 +90,7 @@ impl YARandGenerator for SecureStdRng {
     }
 }
 
-/// Same rational as `SecureStdRng`.
+/// Same rationale as `SecureStdRng`.
 struct SecureChaCha20 {
     internal: ChaCha8Rng,
 }

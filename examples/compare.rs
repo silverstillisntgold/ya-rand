@@ -89,6 +89,7 @@ fn main() {
 
     println!(
         "Filling a slice with {} values || Average nanoseconds per value generated:\n\
+         (all generators are used as provided by their respective crate)\n\
          ----------------------------------------------------------------\n\
          Sequential (local) `rand` average time:             {:>5.2}\n\
          Sequential (local) `fastrand` average time:         {:>5.2}\n\

@@ -20,7 +20,7 @@ pub const DEPTH: usize = 4;
 /// Not at all related to `DEPTH`, they just happen to be
 /// the same in this case.
 pub const CHACHA_DOUBLE_ROUNDS: usize = 4;
-pub const CHACHA_SEED_LEN: usize = size_of::<ChaCha<super::Matrix>>();
+pub const CHACHA_SEED_LEN: usize = 3 * size_of::<Row>();
 
 /// Defines the interface that concrete implementations need to
 /// implement to process the state of a `ChaCha` instance.
@@ -78,7 +78,7 @@ impl<M> From<[u8; CHACHA_SEED_LEN]> for ChaCha<M> {
     #[inline(always)]
     fn from(value: [u8; CHACHA_SEED_LEN]) -> Self {
         // We randomize **all** bits of the matrix, even the counter.
-        // If used as a cipher this is a completely braindead approach,
+        // If used in a cipher this approach is completely braindead,
         // but since this is exclusively for use in a CRNG it's fine.
         unsafe { transmute(value) }
     }
@@ -106,7 +106,7 @@ impl<M: Machine> ChaCha<M> {
         unsafe {
             // Increment 64-bit counter by `DEPTH`. Since we randomize
             // the counter, it's important that this uses `wrapping_add`,
-            // otherwise debug builds might fuck themselves over.
+            // or debug builds might fuck themselves over.
             self.row_d.u64x2[0] = self.row_d.u64x2[0].wrapping_add(DEPTH as u64);
         }
         for _ in 0..CHACHA_DOUBLE_ROUNDS {
@@ -118,7 +118,7 @@ impl<M: Machine> ChaCha<M> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     //! All keystreams for these tests come from [here].
     //! If the amount of double rounds is ever increased, all the
     //! keystream blocks need to be updated.
@@ -376,13 +376,13 @@ mod test {
         assert_blocks_match(&buf, &KEYSTREAM_BLOCK_0, &KEYSTREAM_BLOCK_1);
     }
 
-    // We're only able to retrieve chacha output in blocks of 4, but we
-    // only test the first 2 blocks, discarding the rest.
-    //
-    // Only checking the first 2 is just as good as checking many more,
-    // since if our implementation were even slightly incorrect the output
-    // would diverge almost instantly. Even more so because we test against
-    // multiple keystreams.
+    /// We're only able to retrieve chacha output in blocks of 4, but we
+    /// only test the first 2 blocks, discarding the rest.
+    ///
+    /// Only checking the first 2 is just as good as checking many more,
+    /// since if our implementation were even slightly incorrect the output
+    /// would diverge almost instantly. Even more so because we test against
+    /// multiple keystreams.
     fn assert_blocks_match(buf: &[u64], block_0: &[u8], block_1: &[u8]) {
         // Sanity checks
         assert!(buf.len() == BUF_LEN);
