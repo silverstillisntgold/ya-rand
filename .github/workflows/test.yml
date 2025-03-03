@@ -6,12 +6,12 @@ jobs:
     name: cargo test
     runs-on: ${{ matrix.os }}
     strategy:
-    matrix:
-      include:
-        - os: ubuntu-22.04
-          arch: amd64
-        - os: ubuntu-22.04-arm
-          arch: arm64
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            arch: amd64
+          - os: ubuntu-22.04-arm'
+            arch: arm64
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
