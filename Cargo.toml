@@ -10,7 +10,6 @@ keywords = ["chacha", "rand", "random", "rng", "xoshiro"]
 license = "MIT"
 
 [package.metadata.docs.rs]
-all-features = true
 targets = ["x86_64-unknown-linux-gnu"]
 
 [features]

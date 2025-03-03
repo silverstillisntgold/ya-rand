@@ -97,15 +97,15 @@ impl Machine for Matrix {
             // Look what they need to mimic a fraction of my power.
             state.state[1][3] = vaddq_u32(
                 state.state[1][3],
-                vreinterpretq_u32_u64(vcombine_u64(vcreate_u64(0), vcreate_u64(1))),
+                vreinterpretq_u32_u64(vcombine_u64(vcreate_u64(1), vcreate_u64(0))),
             );
             state.state[2][3] = vaddq_u32(
                 state.state[2][3],
-                vreinterpretq_u32_u64(vcombine_u64(vcreate_u64(0), vcreate_u64(2))),
+                vreinterpretq_u32_u64(vcombine_u64(vcreate_u64(2), vcreate_u64(0))),
             );
             state.state[3][3] = vaddq_u32(
                 state.state[3][3],
-                vreinterpretq_u32_u64(vcombine_u64(vcreate_u64(0), vcreate_u64(3))),
+                vreinterpretq_u32_u64(vcombine_u64(vcreate_u64(3), vcreate_u64(0))),
             );
             state
         }
