@@ -86,7 +86,6 @@ impl Machine for Matrix {
     #[inline(always)]
     fn new(state: &ChaCha<Self>) -> Self {
         unsafe {
-            // TODO: Try using aligned loads.
             let mut state = Matrix {
                 state: [[
                     transmute(ROW_A),

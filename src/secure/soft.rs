@@ -52,7 +52,7 @@ impl Machine for Matrix {
         unsafe {
             // Building an array of `Row`s makes it easy to increment
             // the counters in an architecture-agnostic way.
-            let mut chacha = [[transmute(ROW_A), state.row_b, state.row_c, state.row_d]; DEPTH];
+            let mut chacha = [[ROW_A, state.row_b, state.row_c, state.row_d]; DEPTH];
             chacha[1][3].u64x2[0] = chacha[1][3].u64x2[0].wrapping_add(1);
             chacha[2][3].u64x2[0] = chacha[2][3].u64x2[0].wrapping_add(2);
             chacha[3][3].u64x2[0] = chacha[3][3].u64x2[0].wrapping_add(3);

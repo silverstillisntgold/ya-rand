@@ -5,10 +5,12 @@ use core::{
 };
 
 /// "expand 32-byte k", the standard constant for ChaCha.
-pub const ROW_A: [u32; 4] = [0x6170_7865, 0x3320_646e, 0x7962_2d32, 0x6b20_6574];
+pub const ROW_A: Row = Row {
+    u32x4: [0x6170_7865, 0x3320_646e, 0x7962_2d32, 0x6b20_6574],
+};
 /// Normally, ChaCha outputs only 16 `u32`'s, but we process in
 /// chunks of 4 and output `u64`'s.
-pub const BUF_LEN: usize = 16 * 4 / 2;
+pub const BUF_LEN: usize = 16 * DEPTH / 2;
 /// Since we process in chunks of 4, the counter of the base
 /// ChaCha instance needs to be incremented by 4.
 pub const DEPTH: usize = 4;
@@ -48,6 +50,7 @@ pub trait Machine: Add<Output = Self> + Clone {
 /// `u64x2` is useful for working with a 64-bit counter and `u8x16`
 /// is useful for some tests. `u16x8` is included for completeness.
 #[allow(unused)]
+#[repr(align(16))]
 #[derive(Clone, Copy)]
 pub union Row {
     pub u8x16: [u8; 16],
