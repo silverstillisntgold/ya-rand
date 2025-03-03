@@ -87,16 +87,18 @@ impl<M> From<[u8; CHACHA_SEED_LEN]> for ChaCha<M> {
     }
 }
 
-impl<M: Machine> ChaCha<M> {
+#[cfg(test)]
+impl<M> ChaCha<M> {
     /// Utility for setting all bytes when testing.
-    #[cfg(test)]
-    fn broadcast<const VALUE: u64>(&mut self) {
+    pub fn broadcast<const VALUE: u64>(&mut self) {
         self.row_b.u64x2 = [VALUE, VALUE];
         self.row_c.u64x2 = [VALUE, VALUE];
         // Tests always expect the counter to start at 0.
         self.row_d.u64x2 = [0, VALUE];
     }
+}
 
+impl<M: Machine> ChaCha<M> {
     /// Computes 4 blocks of chacha and fills `buf` with the output.
     ///
     /// This is the inline boundary. Everything beneath this should be
@@ -134,9 +136,9 @@ mod tests {
 
     #[test]
     fn correct_constant() {
-        const EXPECTED: &[u8; 16] = b"expand 32-byte k";
-        const ACTUAL: [u8; 16] = unsafe { transmute(ROW_A) };
-        assert!(ACTUAL == *EXPECTED);
+        const EXPECTED: [u8; 16] = *b"expand 32-byte k";
+        const ACTUAL: [u8; 16] = unsafe { ROW_A.u8x16 };
+        assert!(ACTUAL == EXPECTED);
     }
 
     #[cfg(target_feature = "neon")]
@@ -379,26 +381,12 @@ mod tests {
         assert_blocks_match(&buf, &KEYSTREAM_BLOCK_0, &KEYSTREAM_BLOCK_1);
     }
 
-    /// We're only able to retrieve chacha output in blocks of 4, but we
+    /// We always compute chacha output in blocks of 4, but we
     /// only test the first 2 blocks, discarding the rest.
-    ///
-    /// Only checking the first 2 is just as good as checking many more,
-    /// since if our implementation were even slightly incorrect the output
-    /// would diverge almost instantly. Even more so because we test against
-    /// multiple keystreams.
-    fn assert_blocks_match(buf: &[u64], block_0: &[u8], block_1: &[u8]) {
-        // Sanity checks
-        assert!(buf.len() == BUF_LEN);
-        assert!(block_0.len() == 64);
-        assert!(block_1.len() == 64);
-
-        // Reinterpret &[u64] as &[u8]
-        let buf = unsafe {
-            let data = buf.as_ptr().cast::<u8>();
-            let len = buf.len() * size_of::<u64>();
-            core::slice::from_raw_parts(data, len)
-        };
-        // Compare chacha output against expected results
+    #[inline]
+    fn assert_blocks_match(buf: &[u64; BUF_LEN], block_0: &[u8], block_1: &[u8]) {
+        const LEN: usize = size_of::<[u64; BUF_LEN]>();
+        let buf: &[u8; LEN] = unsafe { transmute(buf) };
         assert!(buf[..64] == *block_0);
         assert!(buf[64..128] == *block_1);
     }

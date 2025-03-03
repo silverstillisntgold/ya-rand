@@ -29,7 +29,7 @@ cfg_if! {
                 use soft::Matrix;
             }
         }
-    } else if #[cfg(target_feature = "neon")] {
+    } else if #[cfg(all(target_feature = "neon", any(target_arch = "aarch64", target_arch = "arm64ec")))] {
         mod neon;
         use neon::Matrix;
     } else {

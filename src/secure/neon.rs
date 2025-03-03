@@ -1,8 +1,5 @@
 use super::{util::DEPTH, ChaCha, Machine, BUF_LEN, ROW_A};
-#[cfg(any(target_arch = "aarch64", target_arch = "arm64ec"))]
 use core::arch::aarch64::*;
-#[cfg(target_arch = "arm")]
-use core::arch::arm::*;
 use core::{mem::transmute, ops::Add};
 
 #[derive(Clone)]
