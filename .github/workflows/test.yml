@@ -15,6 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - run: echo "RUSTFLAGS=-Ctarget-cpu=native" >> "$GITHUB_ENV"
       - run: cargo update
-      - run: cargo test --quiet --no-run
+      - run: cargo test --no-run
       - run: cargo test
