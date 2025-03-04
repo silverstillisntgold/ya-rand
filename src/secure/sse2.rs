@@ -1,4 +1,4 @@
-use super::{ChaCha, Machine, BUF_LEN, DEPTH, ROW_A};
+use super::util::*;
 #[cfg(target_arch = "x86")]
 use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]

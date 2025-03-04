@@ -1,4 +1,4 @@
-//! Compares the performance of various RNG crates
+//! Compares the performance of various PRNG crates
 //! when filling a large slice with random values.
 
 use rand::{rngs, Rng, SeedableRng};

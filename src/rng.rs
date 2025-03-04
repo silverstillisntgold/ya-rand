@@ -70,6 +70,7 @@ pub trait SecureYARandGenerator: YARandGenerator {
     where
         E: crate::ya_rand_encoding::Encoder,
     {
+        // TODO: Should the `false` branch just be a panic?
         match len >= E::MIN_LEN {
             true => Some({
                 const BYTE_VALUES: usize = 1 << u8::BITS;

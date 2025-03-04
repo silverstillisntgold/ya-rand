@@ -1,4 +1,4 @@
-//! Compares the performance of various RNG crates
+//! Compares the performance of various CRNG crates
 //! when filling a large slice with random values.
 
 use chacha20::{rand_core::RngCore, ChaCha8Rng};
@@ -69,8 +69,10 @@ fn time_in_nanos<F: FnOnce()>(op: F) -> f64 {
     time * 1e9
 }
 
-/// Needs a wrapper type because by default `rand` tries
-/// to inline ***EVERYTHING***.
+/// Needs a wrapper type because by default `rand` tries to inline
+/// ***EVERYTHING***, but this crate is much more conservative with inlining.
+/// This isn't intended as a reference benchmark, so it's more useful to
+/// see how all the generators compare when on the same playing field.
 struct SecureStdRng {
     internal: StdRng,
 }

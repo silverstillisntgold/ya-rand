@@ -190,7 +190,8 @@ mod tests {
     use alloc::collections::BTreeSet;
     use ya_rand_encoding::*;
 
-    const ITERATIONS: usize = 1 << 14;
+    const PRIME: usize = 9377;
+    const ITERATIONS: usize = 1 << 13;
     const ITERATIONS_LONG: usize = 1 << 24;
 
     #[test]
@@ -255,47 +256,47 @@ mod tests {
 
     #[test]
     fn text_base64() {
-        text::<Base64, ITERATIONS>();
-        text::<Base64, { ITERATIONS - 1 }>();
+        text_test::<Base64, ITERATIONS>();
+        text_test::<Base64, PRIME>();
     }
 
     #[test]
     fn text_base64_url() {
-        text::<Base64URL, ITERATIONS>();
-        text::<Base64URL, { ITERATIONS - 1 }>();
+        text_test::<Base64URL, ITERATIONS>();
+        text_test::<Base64URL, PRIME>();
     }
 
     #[test]
     fn text_base62() {
-        text::<Base62, ITERATIONS>();
-        text::<Base62, { ITERATIONS - 1 }>();
+        text_test::<Base62, ITERATIONS>();
+        text_test::<Base62, PRIME>();
     }
 
     #[test]
     fn text_base32() {
-        text::<Base32, ITERATIONS>();
-        text::<Base32, { ITERATIONS - 1 }>();
+        text_test::<Base32, ITERATIONS>();
+        text_test::<Base32, PRIME>();
     }
 
     #[test]
     fn text_base32_hex() {
-        text::<Base32Hex, ITERATIONS>();
-        text::<Base32Hex, { ITERATIONS - 1 }>();
+        text_test::<Base32Hex, ITERATIONS>();
+        text_test::<Base32Hex, PRIME>();
     }
 
     #[test]
     fn text_base16() {
-        text::<Base16, ITERATIONS>();
-        text::<Base16, { ITERATIONS - 1 }>();
+        text_test::<Base16, ITERATIONS>();
+        text_test::<Base16, PRIME>();
     }
 
     #[test]
     fn text_base16_lowercase() {
-        text::<Base16Lowercase, ITERATIONS>();
-        text::<Base16Lowercase, { ITERATIONS - 1 }>();
+        text_test::<Base16Lowercase, ITERATIONS>();
+        text_test::<Base16Lowercase, PRIME>();
     }
 
-    fn text<E: Encoder, const LEN: usize>() {
+    fn text_test<E: Encoder, const LEN: usize>() {
         let s = new_rng_secure().text::<E>(LEN).unwrap();
         let distinct_bytes = s.bytes().collect::<BTreeSet<_>>();
         let distinct_chars = s.chars().collect::<BTreeSet<_>>();

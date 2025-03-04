@@ -1,4 +1,4 @@
-use super::{ChaCha, Machine, BUF_LEN, DEPTH, ROW_A};
+use super::util::*;
 use core::{mem::transmute, ops::Add};
 
 #[derive(Clone)]
