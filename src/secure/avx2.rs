@@ -1,12 +1,10 @@
-use super::{util::DEPTH, ChaCha, Machine, BUF_LEN, ROW_A};
+use super::{ChaCha, Machine, BUF_LEN, DEPTH, ROW_A};
 #[cfg(target_arch = "x86")]
 use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
 use core::{mem::transmute, ops::Add};
 
-/// Since each avx2 register holds twice the bits, we only
-/// need half the total registers of the sse2 implementation.
 const HALF_DEPTH: usize = DEPTH / 2;
 
 #[derive(Clone)]
@@ -90,7 +88,7 @@ impl Machine for Matrix {
     #[inline(always)]
     fn new(state: &ChaCha<Self>) -> Self {
         unsafe {
-            let mut state = Matrix {
+            let mut result = Matrix {
                 state: [[
                     _mm256_broadcastsi128_si256(transmute(ROW_A)),
                     _mm256_broadcastsi128_si256(transmute(state.row_b)),
@@ -98,9 +96,11 @@ impl Machine for Matrix {
                     _mm256_broadcastsi128_si256(transmute(state.row_d)),
                 ]; HALF_DEPTH],
             };
-            state.state[0][3] = _mm256_add_epi64(state.state[0][3], _mm256_set_epi64x(0, 0, 0, 1));
-            state.state[1][3] = _mm256_add_epi64(state.state[1][3], _mm256_set_epi64x(0, 2, 0, 3));
-            state
+            result.state[0][3] =
+                _mm256_add_epi64(result.state[0][3], _mm256_set_epi64x(0, 0, 0, 1));
+            result.state[1][3] =
+                _mm256_add_epi64(result.state[1][3], _mm256_set_epi64x(0, 2, 0, 3));
+            result
         }
     }
 
@@ -117,11 +117,6 @@ impl Machine for Matrix {
     #[inline(always)]
     fn fill_block(self, buf: &mut [u64; BUF_LEN]) {
         unsafe {
-            // "WOW, THIS LOOKS LIKE AN ABSOLUTE MESS!!" It kind of is, but
-            // because of the way we create `Matrix`s from the initial `ChaCha`
-            // instance (broadcasting `Row`s into both halves of an `__m256i`),
-            // we have to manually rearrange our final state(s) to output the
-            // computed chacha blocks in the correct order.
             *buf = transmute([
                 [
                     _mm256_extracti128_si256(self.state[0][0], 1),

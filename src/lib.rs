@@ -144,8 +144,8 @@ rustc can trivially remove the failure branch when compiling binaries for those 
 
 #![no_std]
 
-#[cfg(feature = "std")]
-extern crate std;
+#[cfg(feature = "alloc")]
+extern crate alloc;
 
 mod rng;
 mod secure;
@@ -177,9 +177,9 @@ pub fn new_rng_secure() -> SecureRng {
     SecureRng::new()
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 mod encoding;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 pub mod ya_rand_encoding {
     pub use super::encoding::*;
 }
@@ -187,7 +187,7 @@ pub mod ya_rand_encoding {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::BTreeSet;
+    use alloc::collections::BTreeSet;
     use ya_rand_encoding::*;
 
     const ITERATIONS: usize = 1 << 14;

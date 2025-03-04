@@ -1,12 +1,9 @@
-use super::{
-    util::{DEPTH, ROW_A},
-    ChaCha, Machine, BUF_LEN,
-};
+use super::{ChaCha, Machine, BUF_LEN, DEPTH, ROW_A};
 use core::{mem::transmute, ops::Add};
 
 #[derive(Clone)]
 pub struct Matrix {
-    state: [[i32; 16]; DEPTH],
+    state: [[u32; 16]; DEPTH],
 }
 
 impl Add for Matrix {
@@ -50,14 +47,12 @@ impl Machine for Matrix {
     #[inline(always)]
     fn new(state: &ChaCha<Self>) -> Self {
         unsafe {
-            // Building an array of `Row`s makes it easy to increment
-            // the counters in an architecture-agnostic way.
-            let mut chacha = [[ROW_A, state.row_b, state.row_c, state.row_d]; DEPTH];
-            chacha[1][3].u64x2[0] = chacha[1][3].u64x2[0].wrapping_add(1);
-            chacha[2][3].u64x2[0] = chacha[2][3].u64x2[0].wrapping_add(2);
-            chacha[3][3].u64x2[0] = chacha[3][3].u64x2[0].wrapping_add(3);
+            let mut result = [[ROW_A, state.row_b, state.row_c, state.row_d]; DEPTH];
+            result[1][3].u64x2[0] = result[1][3].u64x2[0].wrapping_add(1);
+            result[2][3].u64x2[0] = result[2][3].u64x2[0].wrapping_add(2);
+            result[3][3].u64x2[0] = result[3][3].u64x2[0].wrapping_add(3);
             Self {
-                state: transmute(chacha),
+                state: transmute(result),
             }
         }
     }

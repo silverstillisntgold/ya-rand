@@ -1,6 +1,8 @@
 /*!
 TODO: Module level documentation explaining approach to vectorized implementations
 and optimizations.
+
+https://eprint.iacr.org/2013/759
 */
 
 #![allow(invalid_value)]

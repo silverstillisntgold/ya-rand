@@ -14,8 +14,9 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [features]
 default = ["std"]
+alloc = []
 inline = []
-std = ["getrandom/std"]
+std = ["alloc", "getrandom/std"]
 
 [dependencies]
 cfg-if = "1"

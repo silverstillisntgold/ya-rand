@@ -4,9 +4,9 @@ use core::{
     ops::Add,
 };
 
-/// "expand 32-byte k", the standard constant for ChaCha.
+/// The standard constant for ChaCha.
 pub const ROW_A: Row = Row {
-    u32x4: [0x6170_7865, 0x3320_646e, 0x7962_2d32, 0x6b20_6574],
+    u8x16: *b"expand 32-byte k",
 };
 /// Normally, ChaCha outputs only 16 `u32`'s, but we process in
 /// chunks of 4 and output `u64`'s.
@@ -89,7 +89,7 @@ impl<M> From<[u8; CHACHA_SEED_LEN]> for ChaCha<M> {
 
 #[cfg(test)]
 impl<M> ChaCha<M> {
-    /// Utility for setting all bytes when testing.
+    /// Utility for setting all non-counter bytes.
     pub fn broadcast<const VALUE: u64>(&mut self) {
         self.row_b.u64x2 = [VALUE, VALUE];
         self.row_c.u64x2 = [VALUE, VALUE];
@@ -133,13 +133,6 @@ mod tests {
 
     use super::*;
     use crate::secure::*;
-
-    #[test]
-    fn correct_constant() {
-        const EXPECTED: [u8; 16] = *b"expand 32-byte k";
-        const ACTUAL: [u8; 16] = unsafe { ROW_A.u8x16 };
-        assert!(ACTUAL == EXPECTED);
-    }
 
     #[cfg(target_feature = "neon")]
     #[test]
@@ -383,7 +376,6 @@ mod tests {
 
     /// We always compute chacha output in blocks of 4, but we
     /// only test the first 2 blocks, discarding the rest.
-    #[inline]
     fn assert_blocks_match(buf: &[u64; BUF_LEN], block_0: &[u8], block_1: &[u8]) {
         const LEN: usize = size_of::<[u64; BUF_LEN]>();
         let buf: &[u8; LEN] = unsafe { transmute(buf) };

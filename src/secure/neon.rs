@@ -1,4 +1,4 @@
-use super::{util::DEPTH, ChaCha, Machine, BUF_LEN, ROW_A};
+use super::{ChaCha, Machine, BUF_LEN, DEPTH, ROW_A};
 use core::arch::aarch64::*;
 use core::{mem::transmute, ops::Add};
 
@@ -83,7 +83,7 @@ impl Machine for Matrix {
     #[inline(always)]
     fn new(state: &ChaCha<Self>) -> Self {
         unsafe {
-            let mut state = Matrix {
+            let mut result = Matrix {
                 state: [[
                     transmute(ROW_A),
                     transmute(state.row_b),
@@ -92,19 +92,19 @@ impl Machine for Matrix {
                 ]; DEPTH],
             };
             // Look what they need to mimic a fraction of my power.
-            state.state[1][3] = vaddq_u32(
-                state.state[1][3],
+            result.state[1][3] = vaddq_u32(
+                result.state[1][3],
                 vreinterpretq_u32_u64(vcombine_u64(vcreate_u64(1), vcreate_u64(0))),
             );
-            state.state[2][3] = vaddq_u32(
-                state.state[2][3],
+            result.state[2][3] = vaddq_u32(
+                result.state[2][3],
                 vreinterpretq_u32_u64(vcombine_u64(vcreate_u64(2), vcreate_u64(0))),
             );
-            state.state[3][3] = vaddq_u32(
-                state.state[3][3],
+            result.state[3][3] = vaddq_u32(
+                result.state[3][3],
                 vreinterpretq_u32_u64(vcombine_u64(vcreate_u64(3), vcreate_u64(0))),
             );
-            state
+            result
         }
     }
 

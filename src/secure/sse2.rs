@@ -1,4 +1,4 @@
-use super::{util::DEPTH, ChaCha, Machine, BUF_LEN, ROW_A};
+use super::{ChaCha, Machine, BUF_LEN, DEPTH, ROW_A};
 #[cfg(target_arch = "x86")]
 use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
@@ -86,7 +86,7 @@ impl Machine for Matrix {
     #[inline(always)]
     fn new(state: &ChaCha<Self>) -> Self {
         unsafe {
-            let mut state = Matrix {
+            let mut result = Matrix {
                 state: [[
                     transmute(ROW_A),
                     transmute(state.row_b),
@@ -94,10 +94,10 @@ impl Machine for Matrix {
                     transmute(state.row_d),
                 ]; DEPTH],
             };
-            state.state[1][3] = _mm_add_epi64(state.state[1][3], _mm_set_epi64x(0, 1));
-            state.state[2][3] = _mm_add_epi64(state.state[2][3], _mm_set_epi64x(0, 2));
-            state.state[3][3] = _mm_add_epi64(state.state[3][3], _mm_set_epi64x(0, 3));
-            state
+            result.state[1][3] = _mm_add_epi64(result.state[1][3], _mm_set_epi64x(0, 1));
+            result.state[2][3] = _mm_add_epi64(result.state[2][3], _mm_set_epi64x(0, 2));
+            result.state[3][3] = _mm_add_epi64(result.state[3][3], _mm_set_epi64x(0, 3));
+            result
         }
     }
 
