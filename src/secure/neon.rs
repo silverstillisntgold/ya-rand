@@ -60,9 +60,9 @@ impl Matrix {
     fn make_diagonal(&mut self) {
         unsafe {
             for [a, _, c, d] in self.state.iter_mut() {
+                *a = vextq_u32(*a, *a, 3);
                 *c = vextq_u32(*c, *c, 1);
                 *d = vextq_u32(*d, *d, 2);
-                *a = vextq_u32(*a, *a, 3);
             }
         }
     }

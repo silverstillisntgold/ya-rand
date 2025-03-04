@@ -4,7 +4,7 @@ use core::{
     ops::Add,
 };
 
-/// The standard constant for ChaCha.
+/// Standard constant used in ChaCha implementations.
 pub const ROW_A: Row = Row {
     u8x16: *b"expand 32-byte k",
 };
@@ -138,6 +138,12 @@ mod tests {
     #[test]
     fn chacha_neon() {
         chacha_test::<neon::Matrix>();
+    }
+
+    #[cfg(target_feature = "avx512f")]
+    #[test]
+    fn chacha_avx512() {
+        // TODO
     }
 
     #[cfg(target_feature = "avx2")]

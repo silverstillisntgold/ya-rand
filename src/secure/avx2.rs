@@ -65,9 +65,9 @@ impl Matrix {
     fn make_diagonal(&mut self) {
         unsafe {
             for [a, _, c, d] in self.state.iter_mut() {
+                *a = _mm256_shuffle_epi32(*a, 0b_10_01_00_11);
                 *c = _mm256_shuffle_epi32(*c, 0b_00_11_10_01);
                 *d = _mm256_shuffle_epi32(*d, 0b_01_00_11_10);
-                *a = _mm256_shuffle_epi32(*a, 0b_10_01_00_11);
             }
         }
     }
