@@ -14,7 +14,7 @@ use crate::{SecureYARandGenerator, YARandGenerator};
 use cfg_if::cfg_if;
 use core::{
     mem::{transmute, MaybeUninit},
-    ptr::copy,
+    ptr::copy_nonoverlapping,
 };
 use util::*;
 
@@ -31,6 +31,7 @@ cfg_if! {
                 use soft::Matrix;
             }
         }
+    // NEON on ARM32 is both unsound and gated behind nightly.
     } else if #[cfg(all(target_feature = "neon", any(target_arch = "aarch64", target_arch = "arm64ec")))] {
         mod neon;
         use neon::Matrix;
@@ -57,10 +58,10 @@ impl SecureYARandGenerator for SecureRng {
         let remaining_chunk = dst.chunks_exact_mut(LEN).into_remainder();
         if remaining_chunk.len() != 0 {
             unsafe {
-                let mut data = MaybeUninit::uninit().assume_init();
-                self.internal.block(&mut data);
-                copy(
-                    data.as_ptr().cast(),
+                let mut buf = MaybeUninit::uninit().assume_init();
+                self.internal.block(&mut buf);
+                copy_nonoverlapping(
+                    buf.as_ptr().cast(),
                     remaining_chunk.as_mut_ptr(),
                     remaining_chunk.len(),
                 );

@@ -99,11 +99,7 @@ impl<M> ChaCha<M> {
 }
 
 impl<M: Machine> ChaCha<M> {
-    /// Computes 4 blocks of chacha and fills `buf` with the output.
-    ///
-    /// This is the inline boundary. Everything beneath this should be
-    /// marked `#[inline(always)]`, since most (all?) of it should be vector
-    /// intrinsics or capable of being optimized into vector instructions.
+    /// Computes 4 blocks of chacha and fills `buf` with the result.
     #[inline(never)]
     pub fn block(&mut self, buf: &mut [u64; BUF_LEN]) {
         let mut state = M::new(self);
@@ -125,8 +121,8 @@ impl<M: Machine> ChaCha<M> {
 #[cfg(test)]
 mod tests {
     //! All keystreams for these tests come from [here].
-    //! If the amount of double rounds is ever increased, all the
-    //! keystream blocks need to be updated.
+    //! If the amount of rounds is ever increased, all the
+    //! keystream blocks will need to be updated.
     //!
     //! [here]:
     //! https://github.com/secworks/chacha_testvectors/blob/master/src/chacha_testvectors.txt
@@ -143,7 +139,9 @@ mod tests {
     #[cfg(target_feature = "avx512f")]
     #[test]
     fn chacha_avx512() {
-        // TODO
+        // TODO: Tracking AVX512 stabilization.
+        //
+        // https://github.com/rust-lang/rust/issues/111137
     }
 
     #[cfg(target_feature = "avx2")]
