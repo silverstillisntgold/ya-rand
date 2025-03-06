@@ -17,5 +17,5 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: echo "RUSTFLAGS=-Ctarget-cpu=native" >> "$GITHUB_ENV"
       - run: cargo update
-      - run: cargo test --no-run
-      - run: cargo test
+      - run: cargo test --no-run --features nightly
+      - run: cargo test --features nightly

@@ -143,6 +143,7 @@ rustc can trivially remove the failure branch when compiling binaries for those 
 */
 
 #![no_std]
+#![cfg_attr(feature = "nightly", feature(stdarch_x86_avx512))]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
@@ -190,8 +191,7 @@ mod tests {
     use alloc::collections::BTreeSet;
     use ya_rand_encoding::*;
 
-    const PRIME: usize = 9377;
-    const ITERATIONS: usize = 1 << 13;
+    const ITERATIONS: usize = 10007;
     const ITERATIONS_LONG: usize = 1 << 24;
 
     #[test]
@@ -256,52 +256,45 @@ mod tests {
 
     #[test]
     fn text_base64() {
-        text_test::<Base64, ITERATIONS>();
-        text_test::<Base64, PRIME>();
+        text_test::<Base64>();
     }
 
     #[test]
     fn text_base64_url() {
-        text_test::<Base64URL, ITERATIONS>();
-        text_test::<Base64URL, PRIME>();
+        text_test::<Base64URL>();
     }
 
     #[test]
     fn text_base62() {
-        text_test::<Base62, ITERATIONS>();
-        text_test::<Base62, PRIME>();
+        text_test::<Base62>();
     }
 
     #[test]
     fn text_base32() {
-        text_test::<Base32, ITERATIONS>();
-        text_test::<Base32, PRIME>();
+        text_test::<Base32>();
     }
 
     #[test]
     fn text_base32_hex() {
-        text_test::<Base32Hex, ITERATIONS>();
-        text_test::<Base32Hex, PRIME>();
+        text_test::<Base32Hex>();
     }
 
     #[test]
     fn text_base16() {
-        text_test::<Base16, ITERATIONS>();
-        text_test::<Base16, PRIME>();
+        text_test::<Base16>();
     }
 
     #[test]
     fn text_base16_lowercase() {
-        text_test::<Base16Lowercase, ITERATIONS>();
-        text_test::<Base16Lowercase, PRIME>();
+        text_test::<Base16Lowercase>();
     }
 
-    fn text_test<E: Encoder, const LEN: usize>() {
-        let s = new_rng_secure().text::<E>(LEN).unwrap();
+    fn text_test<E: Encoder>() {
+        let s = new_rng_secure().text::<E>(ITERATIONS).unwrap();
         let distinct_bytes = s.bytes().collect::<BTreeSet<_>>();
         let distinct_chars = s.chars().collect::<BTreeSet<_>>();
 
-        let lengths_are_equal = LEN == s.len()
+        let lengths_are_equal = ITERATIONS == s.len()
             && E::CHARSET.len() == distinct_bytes.len()
             && E::CHARSET.len() == distinct_chars.len();
         assert!(lengths_are_equal);

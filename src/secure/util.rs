@@ -139,12 +139,10 @@ mod tests {
         chacha_test::<neon::Matrix>();
     }
 
-    #[cfg(target_feature = "avx512f")]
+    #[cfg(all(feature = "nightly", target_feature = "avx512f"))]
     #[test]
     fn chacha_avx512() {
-        // TODO: Tracking AVX512 stabilization.
-        //
-        // https://github.com/rust-lang/rust/issues/111137
+        chacha_test::<avx512::Matrix>();
     }
 
     #[cfg(target_feature = "avx2")]

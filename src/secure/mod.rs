@@ -23,7 +23,10 @@ cfg_if! {
         mod avx2;
         mod sse2;
         cfg_if! {
-            if #[cfg(target_feature = "avx2")] {
+            if #[cfg(all(feature = "nightly", target_feature = "avx512f"))] {
+                mod avx512;
+                use avx512::Matrix;
+            } else if #[cfg(target_feature = "avx2")] {
                 use avx2::Matrix;
             } else if #[cfg(target_feature = "sse2")] {
                 use sse2::Matrix;
