@@ -190,9 +190,6 @@ pub mod ya_rand_encoding {
 
 #[cfg(test)]
 mod test {
-    #[cfg(not(feature = "std"))]
-    compile_error!("tests can only be run when the `std` feature is enabled");
-
     use super::*;
     use std::collections::BTreeSet;
     #[cfg(feature = "secure")]

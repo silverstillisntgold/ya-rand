@@ -532,8 +532,7 @@ pub trait YARandGenerator: Sized {
 
     /// Returns a randomly selected ASCII character from the pool of:
     ///
-    /// * `'A'..='Z'`
-    /// * `'a'..='z'`
+    /// `'A'..='Z'`, and`'a'..='z'`
     #[inline]
     fn ascii_alphabetic(&mut self) -> char {
         *self.choose(&ALPHANUMERIC[..52]).unwrap() as char
@@ -541,7 +540,7 @@ pub trait YARandGenerator: Sized {
 
     /// Returns a randomly selected ASCII character from the pool of:
     ///
-    /// * `'A'..='Z'`
+    /// `'A'..='Z'`
     #[inline]
     fn ascii_uppercase(&mut self) -> char {
         *self.choose(&ALPHANUMERIC[..26]).unwrap() as char
@@ -549,7 +548,7 @@ pub trait YARandGenerator: Sized {
 
     /// Returns a randomly selected ASCII character from the pool of:
     ///
-    /// * `'a'..='z'`
+    /// `'a'..='z'`
     #[inline]
     fn ascii_lowercase(&mut self) -> char {
         *self.choose(&ALPHANUMERIC[26..52]).unwrap() as char
@@ -557,9 +556,7 @@ pub trait YARandGenerator: Sized {
 
     /// Returns a randomly selected ASCII character from the pool of:
     ///
-    /// * `'A'..='Z'`
-    /// * `'a'..='z'`
-    /// * `'0'..='9'`
+    /// `'A'..='Z'`, `'a'..='z'`, and `'0'..='9'`
     #[inline]
     fn ascii_alphanumeric(&mut self) -> char {
         *self.choose(&ALPHANUMERIC[..]).unwrap() as char
@@ -567,7 +564,7 @@ pub trait YARandGenerator: Sized {
 
     /// Returns a randomly selected ASCII character from the pool of:
     ///
-    /// * `'0'..='9'`
+    /// `'0'..='9'`
     #[inline]
     fn ascii_digit(&mut self) -> char {
         *self.choose(&ALPHANUMERIC[52..]).unwrap() as char
