@@ -1,5 +1,5 @@
-//! Compares the performance of alternate RNG crates
-//! when filling a slice with random values.
+//! Compares the performance of various PRNG crates
+//! when filling a large slice with random values.
 
 use rand::{rngs, Rng, SeedableRng};
 use rayon::prelude::*;
@@ -31,6 +31,15 @@ fn main() {
     let mut v = Box::new_uninit_slice(ITERATIONS);
     let mut rng = new_rng();
     let sequential_local_yarand = time_in_nanos(move || {
+        v.iter_mut().for_each(|v| {
+            v.write(rng.u64());
+        });
+        black_box(v);
+    });
+
+    let mut v = Box::new_uninit_slice(ITERATIONS);
+    let mut rng = new_rng_secure();
+    let sequential_local_yarand_secure = time_in_nanos(move || {
         v.iter_mut().for_each(|v| {
             v.write(rng.u64());
         });
@@ -80,22 +89,25 @@ fn main() {
 
     println!(
         "Filling a slice with {} values || Average nanoseconds per value generated:\n\
+         (all generators are used as provided by their respective crate)\n\
          ----------------------------------------------------------------\n\
-         Sequential (local) `rand` average time:     {:>5.2}\n\
-         Sequential (local) `fastrand` average time: {:>5.2}\n\
-         Sequential (local) `ya-rand` average time:  {:>5.2} <-- You are here\n\
-         Sequential (local) `oorandom` average time: {:>5.2}\n\
+         Sequential (local) `rand` average time:             {:>5.2}\n\
+         Sequential (local) `fastrand` average time:         {:>5.2}\n\
+         Sequential (local) `ya-rand` average time:          {:>5.2} <-- You are here\n\
+         Sequential (local) `ya-rand` (secure) average time: {:>5.2} <-- and here\n\
+         Sequential (local) `oorandom` average time:         {:>5.2}\n\
          \n\
-         Sequential (TLS)   `rand` average time:     {:>5.2} <-- How most people use `rand`\n\
-         Sequential (TLS)   `fastrand` average time: {:>5.2}\n\
+         Sequential (TLS)   `rand` average time:             {:>5.2} <-- How most people use `rand`\n\
+         Sequential (TLS)   `fastrand` average time:         {:>5.2}\n\
          \n\
-         Parallel   (TLS)   `rand` average time:     {:>5.2}\n\
-         Parallel   (TLS)   `fastrand` average time: {:>5.2}\n\
+         Parallel   (TLS)   `rand` average time:             {:>5.2}\n\
+         Parallel   (TLS)   `fastrand` average time:         {:>5.2}\n\
          ----------------------------------------------------------------\n",
         ITERATIONS,
         sequential_local_rand,
         sequential_local_fastrand,
         sequential_local_yarand,
+        sequential_local_yarand_secure,
         sequential_local_oorand,
         sequential_tls_rand,
         sequential_tls_fastrand,

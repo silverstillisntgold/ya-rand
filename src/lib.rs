@@ -144,15 +144,17 @@ rustc can trivially remove the failure branch when compiling binaries for those 
 
 #![no_std]
 
-#[cfg(feature = "std")]
-extern crate std;
+#[cfg(feature = "alloc")]
+extern crate alloc;
 
 mod rng;
+mod secure;
 mod util;
 mod xoshiro256pp;
 mod xoshiro512pp;
 
-pub use rng::{SeedableYARandGenerator, YARandGenerator};
+pub use rng::{SecureYARandGenerator, SeedableYARandGenerator, YARandGenerator};
+pub use secure::SecureRng;
 pub use xoshiro256pp::Xoshiro256pp;
 pub use xoshiro512pp::Xoshiro512pp;
 
@@ -167,35 +169,29 @@ pub fn new_rng() -> ShiroRng {
     ShiroRng::new()
 }
 
-#[cfg(feature = "secure")]
-mod secure;
-#[cfg(feature = "secure")]
-pub use {rng::SecureYARandGenerator, secure::SecureRng};
-
 /// The recommended way to create new CRNG instances.
 ///
 /// Identical to calling [`SecureRng::new`].
-#[cfg(feature = "secure")]
 #[inline]
 pub fn new_rng_secure() -> SecureRng {
     SecureRng::new()
 }
 
-#[cfg(all(feature = "secure", feature = "std"))]
+#[cfg(feature = "alloc")]
 mod encoding;
-#[cfg(all(feature = "secure", feature = "std"))]
+#[cfg(feature = "alloc")]
 pub mod ya_rand_encoding {
     pub use super::encoding::*;
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
-    use std::collections::BTreeSet;
-    #[cfg(feature = "secure")]
+    use alloc::collections::BTreeSet;
     use ya_rand_encoding::*;
 
-    const ITERATIONS: usize = 1 << 14;
+    const PRIME: usize = 9377;
+    const ITERATIONS: usize = 1 << 13;
     const ITERATIONS_LONG: usize = 1 << 24;
 
     #[test]
@@ -258,56 +254,54 @@ mod test {
         assert!(vals.len() == 10);
     }
 
-    #[cfg(feature = "secure")]
     #[test]
     fn text_base64() {
-        text::<Base64>();
+        text_test::<Base64, ITERATIONS>();
+        text_test::<Base64, PRIME>();
     }
 
-    #[cfg(feature = "secure")]
     #[test]
     fn text_base64_url() {
-        text::<Base64URL>();
+        text_test::<Base64URL, ITERATIONS>();
+        text_test::<Base64URL, PRIME>();
     }
 
-    #[cfg(feature = "secure")]
     #[test]
     fn text_base62() {
-        text::<Base62>();
+        text_test::<Base62, ITERATIONS>();
+        text_test::<Base62, PRIME>();
     }
 
-    #[cfg(feature = "secure")]
     #[test]
     fn text_base32() {
-        text::<Base32>();
+        text_test::<Base32, ITERATIONS>();
+        text_test::<Base32, PRIME>();
     }
 
-    #[cfg(feature = "secure")]
     #[test]
     fn text_base32_hex() {
-        text::<Base32Hex>();
+        text_test::<Base32Hex, ITERATIONS>();
+        text_test::<Base32Hex, PRIME>();
     }
 
-    #[cfg(feature = "secure")]
     #[test]
     fn text_base16() {
-        text::<Base16>();
+        text_test::<Base16, ITERATIONS>();
+        text_test::<Base16, PRIME>();
     }
 
-    #[cfg(feature = "secure")]
     #[test]
     fn text_base16_lowercase() {
-        text::<Base16Lowercase>();
+        text_test::<Base16Lowercase, ITERATIONS>();
+        text_test::<Base16Lowercase, PRIME>();
     }
 
-    #[cfg(feature = "secure")]
-    #[inline(always)]
-    fn text<E: Encoder>() {
-        let s = new_rng_secure().text::<E>(ITERATIONS).unwrap();
+    fn text_test<E: Encoder, const LEN: usize>() {
+        let s = new_rng_secure().text::<E>(LEN).unwrap();
         let distinct_bytes = s.bytes().collect::<BTreeSet<_>>();
         let distinct_chars = s.chars().collect::<BTreeSet<_>>();
 
-        let lengths_are_equal = ITERATIONS == s.len()
+        let lengths_are_equal = LEN == s.len()
             && E::CHARSET.len() == distinct_bytes.len()
             && E::CHARSET.len() == distinct_chars.len();
         assert!(lengths_are_equal);
