@@ -7,6 +7,7 @@ const F32_DIVISOR: f32 = F32_MAX_PRECISE as f32;
 pub const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 /// Trait for RNGs that are known to provide streams of cryptographically secure data.
+#[cfg(feature = "secure")]
 pub trait SecureYARandGenerator: YARandGenerator {
     /// Fills `dst` with random data, which is safe to be used
     /// in cryptographic contexts.
@@ -64,20 +65,19 @@ pub trait SecureYARandGenerator: YARandGenerator {
     ///     );
     /// }
     /// ```
-    #[cfg(feature = "alloc")]
+    #[cfg(feature = "std")]
     #[inline(never)]
-    fn text<E>(&mut self, len: usize) -> Option<alloc::string::String>
+    fn text<E>(&mut self, len: usize) -> Option<std::string::String>
     where
         E: crate::ya_rand_encoding::Encoder,
     {
-        // TODO: Should the `false` branch just be a panic?
         match len >= E::MIN_LEN {
             true => Some({
                 const BYTE_VALUES: usize = 1 << u8::BITS;
                 // SAFETY: u8's are a trivial type and we pwomise to
                 // always overwrite all of them UwU.
                 let mut data = unsafe {
-                    alloc::boxed::Box::new_uninit_slice(len)
+                    std::boxed::Box::new_uninit_slice(len)
                         .assume_init()
                         .into_vec()
                 };
@@ -109,7 +109,7 @@ pub trait SecureYARandGenerator: YARandGenerator {
                 // SAFETY: All provided encoders only use ascii values, and
                 // custom `Encoder` implementations agree to do the same when
                 // implementing the trait.
-                unsafe { alloc::string::String::from_utf8_unchecked(data) }
+                unsafe { std::string::String::from_utf8_unchecked(data) }
             }),
             false => None,
         }
@@ -141,6 +141,37 @@ pub trait SeedableYARandGenerator: YARandGenerator + Default {
     /// ```
     fn new_with_seed(seed: u64) -> Self;
 }
+
+/* **** WIP ****
+/// Trait for RNGs that can simulate byte-streams, but in a way that is insecure
+/// and shouldn't be used for sensitive applications.
+#[cfg(feature = "std")]
+pub trait InsecureYARandGenerator: YARandGenerator {
+    fn fill_bytes_insecure(&mut self, dst: &mut [u8]) {
+        use core::ptr::copy_nonoverlapping as cpy;
+
+        // Approach #1
+        dst.chunks_exact_mut(size_of::<u32>()).for_each(|cur| {
+            let val = self.u32().to_ne_bytes();
+            unsafe {
+                cpy(val.as_ptr(), cur.as_mut_ptr(), cur.len());
+            }
+        });
+        dst.chunks_exact_mut(size_of::<u32>())
+            .into_remainder()
+            .iter_mut()
+            .for_each(|cur| *cur = self.u8());
+
+        // Approach #2
+        let len = (dst.len() / size_of::<u32>()) + 1;
+        let mut src = unsafe { std::boxed::Box::new_uninit_slice(len).assume_init() };
+        src.fill_with(|| self.u32());
+        unsafe {
+            cpy(src.as_ptr().cast(), dst.as_mut_ptr(), dst.len());
+        }
+    }
+}
+*/
 
 /// Base trait that all RNGs must implement.
 pub trait YARandGenerator: Sized {
