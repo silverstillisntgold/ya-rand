@@ -14,7 +14,7 @@ jobs:
             arch: arm64
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
       - run: echo "RUSTFLAGS=-Ctarget-cpu=native" >> "$GITHUB_ENV"
       - run: cargo update
       - run: cargo test --no-run --features nightly
