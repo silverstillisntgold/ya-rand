@@ -9,7 +9,7 @@ const HALF_DEPTH: usize = DEPTH / 2;
 
 #[derive(Clone)]
 pub struct Matrix {
-    state: [[__m256i; 4]; HALF_DEPTH],
+    state: [[__m256i; WIDTH]; HALF_DEPTH],
 }
 
 impl Add for Matrix {

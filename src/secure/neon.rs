@@ -4,7 +4,7 @@ use core::{mem::transmute, ops::Add};
 
 #[derive(Clone)]
 pub struct Matrix {
-    state: [[uint32x4_t; 4]; DEPTH],
+    state: [[uint32x4_t; WIDTH]; DEPTH],
 }
 
 impl Add for Matrix {

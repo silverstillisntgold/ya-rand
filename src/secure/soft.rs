@@ -3,7 +3,7 @@ use core::{mem::transmute, ops::Add};
 
 #[derive(Clone)]
 pub struct Matrix {
-    state: [[u32; 16]; DEPTH],
+    state: [[u32; CHACHA_SIZE]; DEPTH],
 }
 
 impl Add for Matrix {

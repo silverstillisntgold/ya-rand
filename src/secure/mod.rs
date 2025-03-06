@@ -47,7 +47,7 @@ pub struct SecureRng {
 }
 
 impl SecureYARandGenerator for SecureRng {
-    #[inline]
+    #[inline(never)]
     fn fill_bytes(&mut self, dst: &mut [u8]) {
         const LEN: usize = size_of::<[u64; BUF_LEN]>();
         dst.chunks_exact_mut(LEN).for_each(|chunk| {

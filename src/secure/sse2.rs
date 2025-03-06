@@ -7,7 +7,7 @@ use core::{mem::transmute, ops::Add};
 
 #[derive(Clone)]
 pub struct Matrix {
-    state: [[__m128i; 4]; DEPTH],
+    state: [[__m128i; WIDTH]; DEPTH],
 }
 
 impl Add for Matrix {

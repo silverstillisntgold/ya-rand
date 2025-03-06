@@ -8,12 +8,14 @@ use core::{
 pub const ROW_A: Row = Row {
     u8x16: *b"expand 32-byte k",
 };
-/// Normally, ChaCha outputs only 16 `u32`'s, but we process in
-/// chunks of 4 and output `u64`'s.
-pub const BUF_LEN: usize = 16 * DEPTH / 2;
+/// Size (in 32-bit integers) of a reference ChaCha matrix.
+pub const CHACHA_SIZE: usize = 16;
+/// Size (in 64-bit integers) of a ChaCha computation result.
+pub const BUF_LEN: usize = CHACHA_SIZE * DEPTH / (size_of::<u64>() / size_of::<u32>());
 /// Since we process in chunks of 4, the counter of the base
 /// ChaCha instance needs to be incremented by 4.
 pub const DEPTH: usize = 4;
+pub const WIDTH: usize = 4;
 
 /// 4 double rounds makes this a ChaCha8 implementation.
 /// Increasing this would be trivial if ever needed, but the
@@ -27,7 +29,8 @@ pub const CHACHA_SEED_LEN: usize = 3 * size_of::<Row>();
 /// Defines the interface that concrete implementations need to
 /// implement to process the state of a `ChaCha` instance.
 ///
-/// Instances should always process 4 chacha blocks.
+/// `Self::fill_block` should always return the result of 4
+/// processed ChaCha blocks.
 pub trait Machine: Add<Output = Self> + Clone {
     /// Uses the current `ChaCha` state to create a new `Machine`,
     /// which will internally handle it's own counters.
@@ -39,7 +42,7 @@ pub trait Machine: Add<Output = Self> + Clone {
     /// to the implementation, so long as the results are correct.
     fn double_round(&mut self);
 
-    /// Fills `buf` with the output of four processed ChaCha blocks.
+    /// Fills `buf` with the output of 4 processed ChaCha blocks.
     /// It's computationally cheaper to fill a passed-in buffer than
     /// to create and return a new one.
     fn fill_block(self, buf: &mut [u64; BUF_LEN]);
