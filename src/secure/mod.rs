@@ -20,11 +20,12 @@ use util::*;
 
 cfg_if! {
     if #[cfg(any(target_arch = "x86_64", target_arch = "x86"))] {
+        #[cfg(feature = "nightly")]
+        mod avx512;
         mod avx2;
         mod sse2;
         cfg_if! {
             if #[cfg(all(feature = "nightly", target_feature = "avx512f"))] {
-                mod avx512;
                 use avx512::Matrix;
             } else if #[cfg(target_feature = "avx2")] {
                 use avx2::Matrix;
