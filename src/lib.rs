@@ -143,7 +143,10 @@ rustc can trivially remove the failure branch when compiling binaries for those 
 */
 
 #![no_std]
-#![cfg_attr(feature = "nightly", feature(stdarch_x86_avx512))]
+#![cfg_attr(
+    all(feature = "nightly", any(target_arch = "x86_64", target_arch = "x86")),
+    feature(stdarch_x86_avx512)
+)]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
