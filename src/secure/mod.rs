@@ -150,7 +150,7 @@ impl YARandGenerator for SecureRng {
         // If used in a cipher this approach is completely braindead,
         // but since this is exclusively for use in a CRNG it's fine.
         let mut dest = unsafe { MaybeUninit::<[u8; CHACHA_SEED_LEN]>::uninit().assume_init() };
-        getrandom::fill(&mut dest)?;
+        crate::util::fill(&mut dest)?;
         let mut result = SecureRng {
             index: 0,
             buf: unsafe { MaybeUninit::uninit().assume_init() },

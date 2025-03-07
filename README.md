@@ -2,7 +2,7 @@
 
 Simple and fast pseudo/crypto random number generation.
 
-## Performance considerations for users of [`SecureRng`]
+## Performance considerations for users of `SecureRng`
 
 The backing CRNG uses compile-time dispatch, so you'll only get the fastest implementation available to the
 machine if rustc knows what kind of machine to compile for.
@@ -15,7 +15,6 @@ If you're only going to run the final binary on your personal machine, replace `
 If you happen to be building with a nightly toolchain, and for a machine supporting AVX512, the **nightly**
 feature provides an extremely fast AVX512 implementation of the backing ChaCha algorithm.
 
-[`SecureRng`]: https://docs.rs/ya-rand/latest/ya_rand/struct.SecureRng.html
 [x86 feature level]: https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
 [`set`]: https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/set_1
 

@@ -106,7 +106,7 @@ assert!(s.len() == Base16::MIN_LEN);
     Enabled by default, but can be disabled for use in `no_std` environments. Enables normal/exponential
     distributions, error type conversions for getrandom, and the **alloc** feature.
 * **alloc** -
-    Enabled by default. Normally enabled through **std** but can be enabled on it's own for use in
+    Enabled by default. Normally enabled through **std**, but can be enabled on it's own for use in
     `no_std` environments that provide allocation primitives. Enables generation of random and secure
     `String` values when using [`SecureRng`].
 * **inline** -
@@ -115,7 +115,7 @@ assert!(s.len() == Base16::MIN_LEN);
     You'll have to test your specific use case to determine if this feature is worth it for you;
     all the RNGs provided tend to be plenty fast without additional inlining.
 * **nightly** -
-    Enables AVX512 ChaCha implementation for targets that support it.
+    Enables AVX512 [`SecureRng`] implementation for targets that support it.
 
 ## Details
 
