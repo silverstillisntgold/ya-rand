@@ -83,9 +83,6 @@ impl<M> Default for ChaCha<M> {
 impl<M> From<[u8; CHACHA_SEED_LEN]> for ChaCha<M> {
     #[inline(always)]
     fn from(value: [u8; CHACHA_SEED_LEN]) -> Self {
-        // We randomize **all** bits of the matrix, even the counter.
-        // If used in a cipher this approach is completely braindead,
-        // but since this is exclusively for use in a CRNG it's fine.
         unsafe { transmute(value) }
     }
 }
