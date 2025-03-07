@@ -1,6 +1,6 @@
 /*!
-"Alright fucker, so how does all this garbage generate cryptographic random values?" Take a seat
-little Timmy, and allow me to blow your mind (and your FUCKING COCK UwU).
+"Alright you disgusting rat bastard, so how does all this garbage generate cryptographic random values?"
+Take a seat little Timmy, and allow me to blow your mind.
 
 Before anything else, it's important to have a general understanding of the structure of the
 reference ChaCha algorithm. A ChaCha instance typically holds 16 32-bit integers (their signedness
@@ -8,14 +8,14 @@ is irrelevant), in the form of a 4-by-4 matrix. This being a flat or 2d array is
 detail that shouldn't impact performance or output at all, and is something you don't need to
 worry about.
 
-The first 4 integers are constant values of the string "`expand 32-byte k`", and exist to ensure a
+The first 4 integers are constant values from the string "`expand 32-byte k`", and exist to ensure a
 base amount of entropy for instances with shitty key values. The next 8 integers are the key/seed values.
 Of the last 4 integers, the first 2 together represent a 64-bit integer that functions as the counter
 for the instance. **This counter is the only thing that changes between invocations of a given ChaCha
 instance.** Say you run a ChaCha round with a given state, where the 64-bit counter happens to 69. After
 it has returned the result, the counter of that instance will then be 70, which will impact the next execution
 of a ChaCha round. The last 2 integers (nonce values) are used as a way of differentiating between instances
-that have the same key/seed values.
+that might have the same key/seed values.
 
 ```text
 "expa"   "nd 3"  "2-by"  "te k"
@@ -24,11 +24,13 @@ Key      Key      Key    Key
 Counter  Counter  Nonce  Nonce
 ```
 
-Since we are only using ChaCha as an RNG, we just randomize everything when creating instances. Meaning
-we treat the nonce values as extra key/seed values, and the counter can start anywhere in it's cycle.
+Since we are only using ChaCha as an RNG, we randomize everything when creating instances. Meaning that we
+treat the nonce values as extra key/seed values, and the counter can start anywhere in it's cycle.
 This is fast, simple, and means we effectively have 2<sup>320</sup> unique data streams that can be generated.
 Each of these streams can provide 1 ZiB before repeating (when the counter is incremented 2<sup>64</sup>
 times back to where it started on initialization).
+
+All implementations process four instances of chacha per invocation.
 
 The soft implementation is the [reference implementation], but structured in a way that allows the compiler
 to easily auto-vectorize the rounds. The result isn't as fast as the manually vectorized variants, but seems
@@ -40,13 +42,13 @@ The process of generating data using `[SecureRng]` is as follows:
 1. Take the internal `ChaCha` instance and turn it into a `Machine`. A `Machine` serves as the abstraction
 layer for different architectures, and it's contents will vary depending on the flags used to compile the
 final binary (this crate **does not** use runtime dispatch). But it's size will always be 256 bytes,
-because it will always contain 4 distinct chacha matrixs, despite their representations being different.
+since it will always contain 4 distinct chacha matrixs, despite their representations being different.
 This `Machine` handles incrementing the counter values of it's internal chacha blocks by 0, 1, 2, and 3.
 The underlying `ChaCha` struct doesn't bother storing the constants directly, they are instead directly
 loaded from static memory when creating `Machine` instances.
 
-2. The newly created `Machine` is cloned, and the original `ChaCha` instance has it's counter incremented by 4,
-so next time it's called we don't get overlap in any of the internal chacha instances.
+2. The newly created `Machine` is cloned, and the original `ChaCha` instance has it's counter incremented by
+4, so next time it's called we don't get overlap in any of the internal chacha instances.
 
 3. 4 double rounds are performed (making this a ChaCha8 implemetation). In the soft implementation this is
 straightforward, but the vectorized variants take a different approach. A double round performs two rounds,
@@ -60,9 +62,11 @@ reverted.
 4. The `Machine` which has just had chacha rounds performed on it is then added to the cloned `Machine` from
 step 2. The resulting `Machine` then contains the output of four independent chacha matrix computed in parallel.
 
-5. For the soft, sse2, and neon implementations the `Machine` state is already in the layout we need it and
-can be transmuted directly into an array for end-user consumption. But due to how vectors register indexing works,
-we have to do additional work for avx2 and avx512 to make sure the layout of the results are correct.
+5. For the soft, sse2, and neon implementations the `Machine` state is already in the layout we need it and can be
+transmuted (bit-cast) directly into an array for end-user consumption. But due to how vector register indexing works,
+we have to do additional work for avx2 and avx512 to make sure the layout of the results are correct. It looks a
+bit convoluted but all we're doing is moving the internal 128-bit components of the 256/512 bit registers around
+to make their ordering match that of the sse2 variant (which directly uses 128-bit vectors).
 
 [reference implementation]: https://en.wikipedia.org/wiki/Salsa20#ChaCha_variant
 [this paper]: https://eprint.iacr.org/2013/759
@@ -107,6 +111,9 @@ cfg_if! {
     }
 }
 
+/// A cryptographically secure random number generator.
+///
+/// The current implementation is ChaCha with 8 rounds.
 pub struct SecureRng {
     index: usize,
     buf: [u64; BUF_LEN],
@@ -116,15 +123,15 @@ pub struct SecureRng {
 impl SecureYARandGenerator for SecureRng {
     #[inline(never)]
     fn fill_bytes(&mut self, dst: &mut [u8]) {
-        const LEN: usize = size_of::<[u64; BUF_LEN]>();
-        dst.chunks_exact_mut(LEN).for_each(|chunk| {
-            let chunk_ref: &mut [u8; LEN] = chunk.try_into().unwrap();
-            let chunk_reinterpreted: &mut [u64; BUF_LEN] = unsafe { transmute(chunk_ref) };
-            self.internal.block(chunk_reinterpreted);
-        });
-        let remaining_chunk = dst.chunks_exact_mut(LEN).into_remainder();
-        if remaining_chunk.len() != 0 {
-            unsafe {
+        unsafe {
+            const LEN: usize = size_of::<[u64; BUF_LEN]>();
+            dst.chunks_exact_mut(LEN).for_each(|chunk| {
+                let chunk_ref: &mut [u8; LEN] = chunk.try_into().unwrap();
+                let chunk_reinterpreted: &mut [u64; BUF_LEN] = transmute(chunk_ref);
+                self.internal.block(chunk_reinterpreted);
+            });
+            let remaining_chunk = dst.chunks_exact_mut(LEN).into_remainder();
+            if remaining_chunk.len() != 0 {
                 let mut buf = MaybeUninit::uninit().assume_init();
                 self.internal.block(&mut buf);
                 copy_nonoverlapping(
@@ -139,14 +146,14 @@ impl SecureYARandGenerator for SecureRng {
 
 impl YARandGenerator for SecureRng {
     fn try_new() -> Result<Self, getrandom::Error> {
+        // We randomize **all** bits of the matrix, even the counter.
+        // If used in a cipher this approach is completely braindead,
+        // but since this is exclusively for use in a CRNG it's fine.
         let mut dest = unsafe { MaybeUninit::<[u8; CHACHA_SEED_LEN]>::uninit().assume_init() };
         getrandom::fill(&mut dest)?;
         let mut result = SecureRng {
             index: 0,
             buf: unsafe { MaybeUninit::uninit().assume_init() },
-            // We randomize **all** bits of the matrix, even the counter.
-            // If used in a cipher this approach is completely braindead,
-            // but since this is exclusively for use in a CRNG it's fine.
             internal: dest.into(),
         };
         result.internal.block(&mut result.buf);

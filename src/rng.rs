@@ -285,7 +285,7 @@ pub trait YARandGenerator: Sized {
         }
         debug_assert!(
             (max != 0 && high < max) || high == 0,
-            "BUG: this assertion should never be reachable"
+            "BUG: this assertion should be unreachable"
         );
         high
     }
