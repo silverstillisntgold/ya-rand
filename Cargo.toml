@@ -1,6 +1,6 @@
 [package]
 name = "ya-rand"
-version = "0.3.3"
+version = "1.0.0"
 edition = "2021"
 description = "A crate for simple and fast random number generation"
 documentation = "https://docs.rs/ya-rand/latest/ya_rand/"

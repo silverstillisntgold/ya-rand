@@ -70,6 +70,10 @@ to make their ordering match that of the sse2 variant (which directly uses 128-b
 
 [reference implementation]: https://en.wikipedia.org/wiki/Salsa20#ChaCha_variant
 [this paper]: https://eprint.iacr.org/2013/759
+
+## Security
+
+TODO
 */
 
 #![allow(invalid_value)]
