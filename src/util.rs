@@ -1,5 +1,5 @@
 use core::{mem::size_of, slice::from_raw_parts_mut};
-use getrandom::{fill as getrandom, Error};
+use getrandom::{fill, Error};
 
 /// Returns an array filled with pseudo-random data from the output of
 /// a SplitMix64 PRNG, which is seeded using `seed`.
@@ -28,19 +28,6 @@ pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
     };
     fill(state_as_bytes)?;
     Ok(state)
-}
-
-#[inline(always)]
-pub fn fill(dest: &mut [u8]) -> Result<(), Error> {
-    if cfg!(all(windows, not(target_vendor = "win7"))) {
-        // SAFETY: Windows 10 will never fail to provide random data.
-        unsafe {
-            getrandom(dest).unwrap_unchecked();
-        }
-    } else {
-        getrandom(dest)?;
-    }
-    Ok(())
 }
 
 /// Performs 128-bit multiplication on `x` and `y` and returns

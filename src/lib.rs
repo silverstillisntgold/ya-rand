@@ -179,13 +179,16 @@ rustc can trivially remove the failure branch when compiling binaries for those 
 */
 
 #![no_std]
-#![cfg_attr(
-    all(feature = "nightly", any(target_arch = "x86_64", target_arch = "x86")),
-    feature(stdarch_x86_avx512)
-)]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
+
+#[cfg(feature = "alloc")]
+mod encoding;
+#[cfg(feature = "alloc")]
+pub mod ya_rand_encoding {
+    pub use super::encoding::*;
+}
 
 mod rng;
 mod secure;
@@ -215,13 +218,6 @@ pub fn new_rng() -> ShiroRng {
 #[inline]
 pub fn new_rng_secure() -> SecureRng {
     SecureRng::new()
-}
-
-#[cfg(feature = "alloc")]
-mod encoding;
-#[cfg(feature = "alloc")]
-pub mod ya_rand_encoding {
-    pub use super::encoding::*;
 }
 
 #[cfg(test)]

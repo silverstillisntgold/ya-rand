@@ -18,16 +18,6 @@ feature provides an extremely fast AVX512 implementation of the backing ChaCha a
 [x86 feature level]: https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
 [`set`]: https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/set_1
 
-## Windows 10 users on Rust 1.71 or newer
-
-It is ***highly*** recommended that you add `RUSTFLAGS=--cfg windows_raw_dylib` to your path. Currently, the
-[`getrandom`] crate that's used to seed RNGs behind the scenes defers its operation to `windows-targets`,
-which by default statically links to a 5-12MB lib. Adding the above cfg flag tells it to instead use
-the `raw-dylib` feature, which was stabilized in Rust 1.71. This turns `windows-targets` into a small
-macro-only library, which improves compile times and decreases binary size for both debug and release builds.
-
-[`getrandom`]: https://docs.rs/getrandom/latest/getrandom/
-
 ## Usage
 
 These are just a few examples to get you started.
