@@ -189,6 +189,7 @@ pub trait YARandGenerator: Sized {
     /// assert!(rng1 != rng3);
     /// assert!(rng2 != rng3);
     /// ```
+    #[inline]
     fn new() -> Self {
         Self::try_new().expect(
             "WARNING: retrieving random data from the operating system should never fail; \

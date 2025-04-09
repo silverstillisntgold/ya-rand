@@ -3,6 +3,7 @@ use getrandom::{fill, Error};
 
 /// Returns an array filled with pseudo-random data from the output of
 /// a SplitMix64 PRNG, which is seeded using `seed`.
+#[inline]
 pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
     let mut state = [0; SIZE];
     let mut x = seed;
@@ -18,6 +19,7 @@ pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
 }
 
 /// Attempts to return an array filled with random data from operating system entropy.
+#[inline]
 pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
     let mut state = [0; SIZE];
     // SAFETY: I'm over here strokin' my dick I got lotion on my dick right now.

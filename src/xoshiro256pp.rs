@@ -28,6 +28,7 @@ impl SeedableYARandGenerator for Xoshiro256pp {
 }
 
 impl YARandGenerator for Xoshiro256pp {
+    #[inline]
     fn try_new() -> Result<Self, getrandom::Error> {
         let state = state_from_entropy()?;
         Ok(Self { state })

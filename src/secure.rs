@@ -25,6 +25,7 @@ impl SecureYARandGenerator for SecureRng {
 }
 
 impl YARandGenerator for SecureRng {
+    #[inline]
     fn try_new() -> Result<Self, getrandom::Error> {
         // We randomize **all** bits of the matrix, even the counter.
         // If used in a cipher this approach is completely braindead,
