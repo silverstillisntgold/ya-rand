@@ -1,19 +1,14 @@
-#![allow(invalid_value)]
-
 use crate::{SecureYARandGenerator, YARandGenerator};
-use chachacha::ChaCha8Djb;
+use chachacha::*;
 use core::mem::MaybeUninit;
-
-const CHACHA_OUTPUT: usize = 256;
-const CHACHA_OUTPUT_U64: usize = CHACHA_OUTPUT / size_of::<u64>();
-const CHACHA_SEED_LEN: usize = 48;
 
 /// A cryptographically secure random number generator.
 ///
-/// The current implementation is ChaCha with 8 rounds.
+/// The current implementation is ChaCha with 8 rounds,
+/// using the original variation (64-bit counter).
 pub struct SecureRng {
     index: usize,
-    buf: [u64; CHACHA_OUTPUT_U64],
+    buf: [u64; BUF_LEN_U64],
     internal: ChaCha8Djb,
 }
 
@@ -30,14 +25,16 @@ impl YARandGenerator for SecureRng {
         // We randomize **all** bits of the matrix, even the counter.
         // If used in a cipher this approach is completely braindead,
         // but since this is exclusively for use in a CRNG it's fine.
-        let mut dest = unsafe { MaybeUninit::<[u8; CHACHA_SEED_LEN]>::uninit().assume_init() };
-        getrandom::fill(&mut dest)?;
-        let mut result = SecureRng {
+        #[allow(invalid_value)]
+        let mut state = unsafe { MaybeUninit::<[u8; SEED_LEN]>::uninit().assume_init() };
+        getrandom::fill(&mut state)?;
+        let mut internal = ChaCha8Djb::new(state);
+        let buf = internal.get_block_u64();
+        let result = SecureRng {
             index: 0,
-            buf: unsafe { MaybeUninit::uninit().assume_init() },
-            internal: dest.into(),
+            buf,
+            internal,
         };
-        result.internal.fill_block_u64(&mut result.buf);
         Ok(result)
     }
 

@@ -13,7 +13,7 @@ a single cmd-prompt instance using the [`set`] command. On Unix-based systems th
 If you're only going to run the final binary on your personal machine, replace `<level>` with `native`.
 
 If you happen to be building with a nightly toolchain, and for a machine supporting AVX512, the **nightly**
-feature provides an extremely fast AVX512 implementation of the backing ChaCha algorithm.
+feature provides an extremely fast AVX512F implementation of the backing ChaCha algorithm.
 
 [x86 feature level]: https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
 [`set`]: https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/set_1
