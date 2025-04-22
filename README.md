@@ -13,7 +13,7 @@ a single cmd-prompt instance using the [`set`] command. On Unix-based systems th
 If you're only going to run the final binary on your personal machine, replace `<level>` with `native`.
 
 If you happen to be building with a nightly toolchain, and for a machine supporting AVX512, the **nightly**
-feature provides an extremely fast AVX512F implementation of the backing ChaCha algorithm.
+feature provides an AVX512F implementation of the backing ChaCha algorithm.
 
 [x86 feature level]: https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
 [`set`]: https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/set_1
@@ -26,9 +26,9 @@ These are just a few examples to get you started.
 use ya_rand::*;
 
 // **Correct** instantiation is very easy.
-// Seeds the default PRNG using operating system entropy,
+// Seeds a PRNG instance using operating system entropy,
 // so you never have to worry about the quality of the
-// initial state of RNG instances.
+// initial state.
 let mut rng = new_rng();
 
 // Generate a random number with a given upper bound.
@@ -50,7 +50,7 @@ assert!(0.0 <= val && val < 1.0);
 let digit = rng.ascii_digit();
 assert!(digit.is_ascii_digit());
 
-// Randomly seeds the CRNG with OS entropy.
+// Seeds a CRNG instance with OS entropy.
 let mut secure_rng = new_rng_secure();
 
 // We still have access to all the same methods...

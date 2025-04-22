@@ -9,11 +9,11 @@
 /// The `CHARSET` field must only contain valid ascii characters.
 /// Meaning that all u8 values must be in the interval [0, 128).
 /// Failure to uphold this condition will result in `text` methods
-/// returning invalid `Strings`'s.
+/// returning invalid `String` values.
 ///
 /// The `MIN_LEN` field must be at least ceil(log<sub>`base`</sub>(2<sup>128</sup>)),
 /// where `base` is the length of the `CHARSET` field. Failure to uphold
-/// this condition will result in poor security of generated `String`'s.
+/// this condition will result in poor security of generated `String` values.
 pub unsafe trait Encoder {
     /// The character set of the encoder implementation.
     ///

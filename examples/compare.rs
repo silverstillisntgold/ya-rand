@@ -1,7 +1,7 @@
 //! Compares the performance of various PRNG crates
 //! when filling a large slice with random values.
 
-use rand::{rngs, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs};
 use rayon::prelude::*;
 use std::hint::black_box;
 use std::time::Instant;

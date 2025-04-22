@@ -1,8 +1,8 @@
 //! Compares the performance of various CRNG crates
 //! when filling a large slice with random values.
 
-use chacha20::{rand_core::RngCore, ChaCha8Rng};
-use rand::{rngs::StdRng, SeedableRng};
+use chacha20::{ChaCha8Rng, rand_core::RngCore};
+use rand::{SeedableRng, rngs::StdRng};
 use std::hint::black_box;
 use std::time::Instant;
 use ya_rand::*;

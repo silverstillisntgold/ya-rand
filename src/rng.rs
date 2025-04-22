@@ -1,3 +1,10 @@
+use core::ptr::swap;
+#[cfg(feature = "alloc")]
+use {
+    crate::ya_rand_encoding::Encoder,
+    alloc::{boxed::Box, string::String},
+};
+
 const F64_MANT: u32 = f64::MANTISSA_DIGITS;
 const F32_MANT: u32 = f32::MANTISSA_DIGITS;
 const F64_MAX_PRECISE: u64 = 1 << F64_MANT;
@@ -8,8 +15,7 @@ pub const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrst
 
 /// Trait for RNGs that are known to provide streams of cryptographically secure data.
 pub trait SecureYARandGenerator: YARandGenerator {
-    /// Fills `dst` with random data, which is safe to be used
-    /// in cryptographic contexts.
+    /// Fills `dst` with random data, which is safe to be used in cryptographic contexts.
     ///
     /// # Examples
     ///
@@ -29,9 +35,7 @@ pub trait SecureYARandGenerator: YARandGenerator {
     /// `String` reprensents both the size of the `String` in bytes, and the
     /// amount of characters it contains.
     ///
-    /// Only returns `None` when `len` is less than what the encoder declares to be
-    /// secure. The compiler is typically able to remove the `None` branch
-    /// when `len` is a constant satisfying the length requirement of the encoder.
+    /// Returns `None` when `len` is less than what the encoder declares to be secure.
     ///
     /// All provided encoders are accessible through [`crate::ya_rand_encoding`].
     /// Users wishing to implement their own encoding must do so through the
@@ -65,22 +69,13 @@ pub trait SecureYARandGenerator: YARandGenerator {
     /// }
     /// ```
     #[cfg(feature = "alloc")]
-    #[inline(never)]
-    fn text<E>(&mut self, len: usize) -> Option<alloc::string::String>
-    where
-        E: crate::ya_rand_encoding::Encoder,
-    {
-        // TODO: Should the `false` branch just be a panic?
+    fn text<E: Encoder>(&mut self, len: usize) -> Option<String> {
         match len >= E::MIN_LEN {
             true => Some({
                 const BYTE_VALUES: usize = 1 << u8::BITS;
                 // SAFETY: u8's are a trivial type and we pwomise to
                 // always overwrite all of them UwU.
-                let mut data = unsafe {
-                    alloc::boxed::Box::new_uninit_slice(len)
-                        .assume_init()
-                        .into_vec()
-                };
+                let mut data = unsafe { Box::new_uninit_slice(len).assume_init().into_vec() };
                 // This branch is evaluated at compile time, so concrete
                 // implementations in final binaries will only have the
                 // contents of the branch suitable for the encoder used.
@@ -109,7 +104,7 @@ pub trait SecureYARandGenerator: YARandGenerator {
                 // SAFETY: All provided encoders only use ascii values, and
                 // custom `Encoder` implementations agree to do the same when
                 // implementing the trait.
-                unsafe { alloc::string::String::from_utf8_unchecked(data) }
+                unsafe { String::from_utf8_unchecked(data) }
             }),
             false => None,
         }
@@ -254,7 +249,7 @@ pub trait YARandGenerator: Sized {
     /// Returns a uniformly distributed `u64` in the interval [0, `max`).
     ///
     /// Using [`YARandGenerator::bits`] when `max` happens to be a power of 2
-    /// is faster and generates better assembly.
+    /// will be significantly faster.
     ///
     /// # Examples
     ///
@@ -454,7 +449,7 @@ pub trait YARandGenerator: Sized {
 
     /// Returns a randomly chosen item from the iterator of `collection`.
     ///
-    /// Only returns `None` when the length of the iterator is zero.
+    /// Returns `None` when the length of the iterator is zero.
     ///
     /// # Examples
     ///
@@ -560,7 +555,6 @@ pub trait YARandGenerator: Sized {
     /// rng.shuffle(&mut data);
     /// assert!(data.is_sorted() == false);
     /// ```
-    #[inline(never)]
     fn shuffle<T>(&mut self, slice: &mut [T]) {
         let slice_ptr = slice.as_mut_ptr();
         for i in (1..slice.len()).rev() {
@@ -569,7 +563,7 @@ pub trait YARandGenerator: Sized {
             // bounded by slice length; index 'j' will always be
             // in bounds because it's bounded by 'i'.
             unsafe {
-                core::ptr::swap(slice_ptr.add(i), slice_ptr.add(j));
+                swap(slice_ptr.add(i), slice_ptr.add(j));
             }
         }
     }

@@ -14,18 +14,10 @@ a single cmd-prompt instance using the [`set`] command. On Unix-based systems th
 If you're only going to run the final binary on your personal machine, replace `<level>` with `native`.
 
 If you happen to be building with a nightly toolchain, and for a machine supporting AVX512, the **nightly**
-feature provides an implementation of the backing ChaCha algorithm.
+feature provides an AVX512F implementation of the backing ChaCha algorithm.
 
 [x86 feature level]: https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
 [`set`]: https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/set_1
-
-## Windows 10 users on Rust 1.71 or newer
-
-It is ***highly*** recommended that you add `RUSTFLAGS=--cfg windows_raw_dylib` to your path. Currently, the
-[`getrandom`] crate that's used to seed RNGs behind the scenes defers its operation to `windows-targets`,
-which by default statically links to a 5-12MB lib. Adding the above cfg flag tells it to instead use
-the `raw-dylib` feature, which was stabilized in Rust 1.71. This turns `windows-targets` into a small
-macro-only library, which improves compile times and decreases binary size for both debug and release builds.
 
 ## But why?
 
@@ -107,15 +99,15 @@ assert!(s.len() == Base16::MIN_LEN);
     distributions, error type conversions for getrandom, and the **alloc** feature.
 * **alloc** -
     Enabled by default. Normally enabled through **std**, but can be enabled on it's own for use in
-    `no_std` environments that provide allocation primitives. Enables generation of random and secure
+    `no_std` environments that provide allocation primitives. Enables random generation of secure
     `String` values when using [`SecureRng`].
 * **inline** -
-    Marks each [`YARandGenerator::u64`] implementation with #\[inline\]. Should generally increase
+    Marks all [`YARandGenerator::u64`] implementations with #\[inline\]. Should generally increase
     runtime performance at the cost of binary size and compile time.
     You'll have to test your specific use case to determine if this feature is worth it for you;
     all the RNGs provided tend to be plenty fast without additional inlining.
 * **nightly** -
-    Enables AVX512 [`SecureRng`] implementation for targets that support it.
+    Enables AVX512F [`SecureRng`] implementation on targets that support it.
 
 ## Details
 
@@ -154,19 +146,18 @@ Exponential variates are generated using [this approach].
 
 ## Security
 
-If you're in the market for secure random number generation, this crate provides optimized implementations
-of the ChaCha8 stream cipher for x86 and ARM, and a fallback implemenation that is easily optimized by the
-compiler for other architectures. It functions identically to the other provided RNGs, but with added
+If you're in the market for secure random number generation, this crate provides an optimized Chacha8
+implementation via the [`chachacha`] crate. It functions identically to the other provided RNGs, but with added
 functionality that wouldn't be safe to use on pseudo RNGs. Why only 8 rounds? Because people who are very
 passionate about cryptography are convinced that's enough, and I have zero reason to doubt them, nor any capacity
 to prove them wrong. See page 14 of the [`Too Much Crypto`] paper if you're interested in the justification.
 
-The security promises made to the user are identical to those made by ChaCha as an algorithm. It is up
+The security guarantees made to the user are identical to those made by Chacha as an algorithm. It is up
 to you to determine if those guarantees meet the demands of your use case.
 
 I reserve the right to change the backing implementation at any time to another RNG which is at least as secure,
 without changing the API or bumping the major/minor version. Realistically, this just means I'm willing to bump
-this to ChaCha12 if ChaCha8 is ever compromised.
+this to Chacha12 if Chacha8 is ever compromised.
 
 [`Too Much Crypto`]: https://eprint.iacr.org/2019/1492
 
@@ -291,40 +282,40 @@ mod tests {
 
     #[test]
     fn text_base64() {
-        text_test::<Base64>();
+        test_text::<Base64>();
     }
 
     #[test]
     fn text_base64_url() {
-        text_test::<Base64URL>();
+        test_text::<Base64URL>();
     }
 
     #[test]
     fn text_base62() {
-        text_test::<Base62>();
+        test_text::<Base62>();
     }
 
     #[test]
     fn text_base32() {
-        text_test::<Base32>();
+        test_text::<Base32>();
     }
 
     #[test]
     fn text_base32_hex() {
-        text_test::<Base32Hex>();
+        test_text::<Base32Hex>();
     }
 
     #[test]
     fn text_base16() {
-        text_test::<Base16>();
+        test_text::<Base16>();
     }
 
     #[test]
     fn text_base16_lowercase() {
-        text_test::<Base16Lowercase>();
+        test_text::<Base16Lowercase>();
     }
 
-    fn text_test<E: Encoder>() {
+    fn test_text<E: Encoder>() {
         let s = new_rng_secure().text::<E>(ITERATIONS).unwrap();
         let distinct_bytes = s.bytes().collect::<BTreeSet<_>>();
         let distinct_chars = s.chars().collect::<BTreeSet<_>>();

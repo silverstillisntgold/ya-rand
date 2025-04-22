@@ -1,5 +1,6 @@
-use core::{mem::size_of, slice::from_raw_parts_mut};
-use getrandom::{fill, Error};
+use core::mem::size_of;
+use core::slice::from_raw_parts_mut;
+use getrandom::*;
 
 /// Returns an array filled with pseudo-random data from the output of
 /// a SplitMix64 PRNG, which is seeded using `seed`.
@@ -36,7 +37,7 @@ pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
 /// the result as a tuple of u64 values (high, low).
 ///
 /// On modern architectures this can be compiled into a single instruction.
-#[inline(always)]
+#[inline]
 pub fn wide_mul(x: u64, y: u64) -> (u64, u64) {
     let product = (x as u128).wrapping_mul(y as u128);
     let high = (product >> u64::BITS) as u64;

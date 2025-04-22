@@ -1,7 +1,5 @@
-use crate::{
-    rng::{SeedableYARandGenerator, YARandGenerator},
-    util::{state_from_entropy, state_from_seed},
-};
+use crate::rng::*;
+use crate::util::*;
 
 /// Rust implementation of the xoshiro256++ PRNG.
 /// This generator is fast, high-quality, and small,
