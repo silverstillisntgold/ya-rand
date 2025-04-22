@@ -20,7 +20,7 @@ nightly = ["chachacha/nightly"]
 std = ["alloc", "getrandom/std"]
 
 [dependencies]
-chachacha = "0.1"
+chachacha = "0.2"
 getrandom = "0.3"
 
 [dev-dependencies]
