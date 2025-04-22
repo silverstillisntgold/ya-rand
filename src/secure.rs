@@ -26,7 +26,7 @@ impl YARandGenerator for SecureRng {
         // If used in a cipher this approach is completely braindead,
         // but since this is exclusively for use in a CRNG it's fine.
         #[allow(invalid_value)]
-        let mut state = unsafe { MaybeUninit::<[u8; SEED_LEN]>::uninit().assume_init() };
+        let mut state = unsafe { MaybeUninit::<[u8; SEED_LEN_U8]>::uninit().assume_init() };
         getrandom::fill(&mut state)?;
         let mut internal = ChaCha8Djb::new(state);
         let buf = internal.get_block_u64();
