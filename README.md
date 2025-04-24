@@ -67,4 +67,4 @@ let s = secure_rng.text::<Base16>(Base16::MIN_LEN).unwrap();
 assert!(s.len() == Base16::MIN_LEN);
 ```
 
-See https://docs.rs/ya-rand/latest/ya_rand/ for full documentation and more examples.
+See https://docs.rs/ya-rand for full documentation and more examples.
