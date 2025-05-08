@@ -178,9 +178,8 @@ extern crate alloc;
 
 #[cfg(feature = "alloc")]
 mod encoding;
-/// Module providing the [`Encoder`] trait and concrete implementations of the [RFC 4648] encoding schemes.
-///
-/// [RFC 4648]: https://datatracker.ietf.org/doc/html/rfc4648
+/// Module providing the [`Encoder`](crate::encoding::Encoder) trait and concrete implementations
+/// of the [RFC 4648](https://datatracker.ietf.org/doc/html/rfc4648) encoding schemes.
 #[cfg(feature = "alloc")]
 pub mod ya_rand_encoding {
     pub use super::encoding::*;
