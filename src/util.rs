@@ -1,6 +1,6 @@
 use core::mem::size_of;
 use core::slice::from_raw_parts_mut;
-use getrandom::*;
+use getrandom::{Error, fill};
 
 /// Returns an array filled with pseudo-random data from the output of
 /// a SplitMix64 PRNG, which is seeded using `seed`.

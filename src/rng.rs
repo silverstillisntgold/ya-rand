@@ -1,4 +1,5 @@
 use core::ptr::swap;
+use core::slice::from_raw_parts_mut;
 #[cfg(feature = "alloc")]
 use {
     crate::ya_rand_encoding::Encoder,
@@ -13,7 +14,7 @@ const F64_DIVISOR: f64 = F64_MAX_PRECISE as f64;
 const F32_DIVISOR: f32 = F32_MAX_PRECISE as f32;
 pub const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-/// Trait for RNGs that are known to provide streams of cryptographically secure data.
+/// Trait for RNGs that provide cryptographically secure data.
 pub trait SecureYARandGenerator: YARandGenerator {
     /// Fills `dst` with random data, which is safe to be used in cryptographic contexts.
     ///
@@ -28,6 +29,49 @@ pub trait SecureYARandGenerator: YARandGenerator {
     /// assert!(data.into_iter().any(|v| v != 0));
     /// ```
     fn fill_bytes(&mut self, dst: &mut [u8]);
+
+    /// Fills `dst` with random data, which is safe to be used in cryptographic contexts.
+    ///
+    /// Differs from [`SecureYARandGenerator::fill_bytes`] in that the underlying type of `dst`
+    /// doesn't need to be any specific type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ya_rand::*;
+    ///
+    /// #[repr(C)]
+    /// #[derive(Clone, Copy, Default, PartialEq, Eq)]
+    /// struct NotAByte {
+    ///     x: u16,
+    ///     y: u32,
+    ///     z: u64,
+    /// }
+    ///
+    /// let mut rng = new_rng_secure();
+    /// let zero_value = NotAByte::default();
+    /// let mut data = [zero_value; 69];
+    /// unsafe {
+    ///     rng.fill_raw(&mut data);
+    /// }
+    /// assert!(data.into_iter().any(|v| v != zero_value));
+    /// ```
+    ///
+    /// # Safety
+    ///
+    /// `T` must be valid as nothing more than a collection of bytes.
+    /// Integer types are the simplest example of this, but structs of integer types
+    /// generally should fall under the same umbrella.
+    #[inline]
+    unsafe fn fill_raw<T>(&mut self, dst: &mut [T]) {
+        // SAFETY: The caller has promised not to be a fucking dumbass.
+        let dst_as_bytes = unsafe {
+            let data = dst.as_mut_ptr().cast();
+            let len = dst.len() * size_of::<T>();
+            from_raw_parts_mut(data, len)
+        };
+        self.fill_bytes(dst_as_bytes);
+    }
 
     /// Generates a random `String` with length `len`, using the provided
     /// `Encoder` to determine character set and minimum secure length. Since
@@ -91,8 +135,8 @@ pub trait SecureYARandGenerator: YARandGenerator {
                     // `CHARSET` is divisible by the amount of possible u8 values,
                     // which is why we need a fallback approach.
                     for d in &mut data {
-                        let random_value = *d as usize;
-                        *d = E::CHARSET[random_value % E::CHARSET.len()];
+                        let random_index = *d as usize;
+                        *d = E::CHARSET[random_index % E::CHARSET.len()];
                     }
                 } else {
                     // Alternative approach that's potentially much slower,
@@ -128,11 +172,14 @@ pub trait SeedableYARandGenerator: YARandGenerator + Default {
     /// ```
     /// use ya_rand::*;
     ///
-    /// // In actual use these would be declared `mut`.
-    /// let rng1 = ShiroRng::new_with_seed(0);
-    /// let rng2 = ShiroRng::default();
-    /// // Default is just a shortcut for manually seeding with 0.
+    /// let mut rng1 = ShiroRng::new_with_seed(0);
+    /// // Default initialization is just a shortcut for explicitly seeding with 0.
+    /// let mut rng2 = ShiroRng::default();
     /// assert!(rng1 == rng2);
+    ///
+    /// let result1 = rng1.u64();
+    /// let result2 = rng2.u64();
+    /// assert!(result1 == result2);
     /// ```
     fn new_with_seed(seed: u64) -> Self;
 }

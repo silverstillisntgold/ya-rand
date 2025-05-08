@@ -2,7 +2,7 @@
 
 Simple and fast pseudo/crypto random number generation.
 
-## Performance considerations for users of `SecureRng`
+## Performance considerations
 
 The backing CRNG uses compile-time dispatch, so you'll only get the fastest implementation available to the
 machine if rustc knows what kind of machine to compile for.

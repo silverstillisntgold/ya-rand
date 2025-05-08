@@ -3,7 +3,7 @@
 
 Simple and fast pseudo/crypto random number generation.
 
-## Performance considerations for users of [`SecureRng`]
+## Performance considerations
 
 The backing CRNG uses compile-time dispatch, so you'll only get the fastest implementation available to the
 machine if rustc knows what kind of machine to compile for.
@@ -146,18 +146,19 @@ Exponential variates are generated using [this approach].
 
 ## Security
 
-If you're in the market for secure random number generation, this crate provides an optimized Chacha8
-implementation via the [`chachacha`] crate. It functions identically to the other provided RNGs, but with added
-functionality that wouldn't be safe to use on pseudo RNGs. Why only 8 rounds? Because people who are very
-passionate about cryptography are convinced that's enough, and I have zero reason to doubt them, nor any capacity
-to prove them wrong. See page 14 of the [`Too Much Crypto`] paper if you're interested in the justification.
+If you're in the market for secure random number generation, this crate provides a secure generator backed
+by a highly optimized ChaCha8 implementation from the [`chachacha`] crate.
+It functions identically to the other provided RNGs, but with added functionality that wouldn't be safe to
+use on pseudo RNGs. Why only 8 rounds? Because people who are very passionate about cryptography are convinced
+that's enough, and I have zero reason to doubt them, nor any capacity to prove them wrong.
+See page 14 of the [`Too Much Crypto`] paper if you're interested in the justification.
 
-The security guarantees made to the user are identical to those made by Chacha as an algorithm. It is up
+The security guarantees made to the user are identical to those made by ChaCha as an algorithm. It is up
 to you to determine if those guarantees meet the demands of your use case.
 
 I reserve the right to change the backing implementation at any time to another RNG which is at least as secure,
 without changing the API or bumping the major/minor version. Realistically, this just means I'm willing to bump
-this to Chacha12 if Chacha8 is ever compromised.
+this to ChaCha12 if ChaCha8 is ever compromised.
 
 [`Too Much Crypto`]: https://eprint.iacr.org/2019/1492
 
@@ -170,12 +171,16 @@ rustc can trivially remove the failure branch when compiling binaries for those 
 */
 
 #![no_std]
+#![warn(missing_docs)]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
 #[cfg(feature = "alloc")]
 mod encoding;
+/// Module providing the [`Encoder`] trait and concrete implementations of the [RFC 4648] encoding schemes.
+///
+/// [RFC 4648]: https://datatracker.ietf.org/doc/html/rfc4648
 #[cfg(feature = "alloc")]
 pub mod ya_rand_encoding {
     pub use super::encoding::*;
