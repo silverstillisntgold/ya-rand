@@ -170,14 +170,15 @@ Modern Windows versions (10 and newer) have a crypto subsystem that will never f
 rustc can trivially remove the failure branch when compiling binaries for those systems.
 */
 
+#![deny(missing_docs)]
 #![no_std]
-#![warn(missing_docs)]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
 #[cfg(feature = "alloc")]
 mod encoding;
+
 /// Module providing the [`Encoder`](crate::encoding::Encoder) trait and concrete implementations
 /// of the [RFC 4648](https://datatracker.ietf.org/doc/html/rfc4648) encoding schemes.
 #[cfg(feature = "alloc")]

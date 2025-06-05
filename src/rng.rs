@@ -1,9 +1,11 @@
+use crate::util::wide_mul;
 use core::ptr::swap;
 use core::slice::from_raw_parts_mut;
+
 #[cfg(feature = "alloc")]
 use {
     crate::ya_rand_encoding::Encoder,
-    alloc::{boxed::Box, string::String},
+    alloc::{boxed::Box, string::String, vec::Vec},
 };
 
 const F64_MANT: u32 = f64::MANTISSA_DIGITS;
@@ -314,21 +316,21 @@ pub trait YARandGenerator: Sized {
     /// ```
     #[inline]
     fn bound(&mut self, max: u64) -> u64 {
-        // Lemire's method: https://arxiv.org/abs/1805.10941.
-        let mut mul = || crate::util::wide_mul(self.u64(), max);
-        let (mut high, mut low) = mul();
+        // Lemire's nearly divisionless method: https://arxiv.org/abs/1805.10941.
+        let (mut high, mut low) = wide_mul(self.u64(), max);
         match low < max {
             false => {}
             true => {
+                // The dreaded division.
                 let threshold = max.wrapping_neg() % max;
                 while low < threshold {
-                    (high, low) = mul();
+                    (high, low) = wide_mul(self.u64(), max);
                 }
             }
         }
         debug_assert!(
             (max != 0 && high < max) || high == 0,
-            "BUG: this assertion should be unreachable"
+            "BUG: assertion should be unreachable"
         );
         high
     }
@@ -446,7 +448,7 @@ pub trait YARandGenerator: Sized {
     #[cfg(feature = "std")]
     fn f64_normal(&mut self) -> (f64, f64) {
         // Marsaglia polar method.
-        // TLDR: It projects a point **within** the unit
+        // TLDR: It projects a point within the unit
         // circle onto the unit radius.
         let mut x: f64;
         let mut y: f64;
@@ -455,7 +457,7 @@ pub trait YARandGenerator: Sized {
             x = self.f64_wide();
             y = self.f64_wide();
             s = (x * x) + (y * y);
-            // Reroll if s does not lie **within** the unit circle.
+            // Reroll if `s` does not lie **within** the unit circle.
             match s < 1.0 && s != 0.0 {
                 true => break,
                 false => {}
@@ -473,15 +475,15 @@ pub trait YARandGenerator: Sized {
     #[inline]
     fn f64_normal_distribution(&mut self, mean: f64, stddev: f64) -> (f64, f64) {
         let (x, y) = self.f64_normal();
-        ((x * stddev) + mean, (y * stddev) + mean)
+        (x.mul_add(stddev, mean), y.mul_add(stddev, mean))
     }
 
     /// Returns an exponentially distributed `f64` with `lambda` of `1.0`.
     #[cfg(feature = "std")]
     #[inline]
     fn f64_exponential(&mut self) -> f64 {
-        // Using abs() instead of negating the result of ln()
-        // to avoid outputs of -0.0.
+        // Using abs() instead of negating the result of ln() to
+        // eliminate the possibility of ever returning -0.0.
         self.f64_nonzero().ln().abs()
     }
 
@@ -613,5 +615,17 @@ pub trait YARandGenerator: Sized {
                 swap(slice_ptr.add(i), slice_ptr.add(j));
             }
         }
+    }
+
+    /// Clones `slice` into a new `Vec`, performs a Fisher-Yates
+    /// shuffle on it's contents, and returns the result.
+    ///
+    /// See [`YARandGenerator::shuffle`] for details/examples.
+    #[cfg(feature = "alloc")]
+    #[inline]
+    fn shuffle_cloned<T: Clone>(&mut self, slice: &[T]) -> Vec<T> {
+        let mut v = slice.to_vec();
+        self.shuffle(&mut v);
+        v
     }
 }

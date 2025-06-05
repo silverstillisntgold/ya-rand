@@ -1,6 +1,6 @@
 [package]
 name = "ya-rand"
-version = "1.2.1"
+version = "1.3.0"
 edition = "2024"
 description = "A crate for simple and fast random number generation"
 documentation = "https://docs.rs/ya-rand"
@@ -32,4 +32,4 @@ rayon = "1.10"
 [dev-dependencies.chacha20]
 default-features = false
 features = ["rng"]
-version = "=0.10.0-pre.3"
+version = "=0.10.0-rc.0"

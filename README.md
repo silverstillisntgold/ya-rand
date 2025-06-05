@@ -20,7 +20,7 @@ feature provides an AVX512F implementation of the backing ChaCha algorithm.
 
 ## Usage
 
-These are just a few examples to get you started.
+Here are a few examples to get you started.
 
 ```rust
 use ya_rand::*;

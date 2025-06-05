@@ -33,10 +33,8 @@ pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
     Ok(state)
 }
 
-/// Performs 128-bit multiplication on `x` and `y` and returns
-/// the result as a tuple of u64 values (high, low).
-///
-/// On modern architectures this can be compiled into a single instruction.
+/// Performs 128-bit multiplication on `x` and `y` and returns the
+/// result as a tuple of `u64` values in the format (high, low).
 #[inline]
 pub fn wide_mul(x: u64, y: u64) -> (u64, u64) {
     let product = (x as u128).wrapping_mul(y as u128);

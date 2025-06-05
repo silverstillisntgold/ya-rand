@@ -37,7 +37,7 @@ unsafe impl Encoder for Base64 {
     const MIN_LEN: usize = 22;
 }
 
-/// Base64 encoding for URLs and filenames, as specified by RFC 4648.
+/// Base64 (URLs and filenames) encoding, as specified by RFC 4648.
 ///
 /// Minimum secure length is 22.
 pub struct Base64URL;
@@ -67,7 +67,7 @@ unsafe impl Encoder for Base32 {
     const MIN_LEN: usize = 26;
 }
 
-/// Base32 encoding using extended hex, as specified by RFC 4648.
+/// Base32 (extended hexidecimal) encoding, as specified by RFC 4648.
 ///
 /// Minimum secure length is 26.
 pub struct Base32Hex;
