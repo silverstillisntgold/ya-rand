@@ -1,5 +1,8 @@
 use crate::rng::*;
 use chachacha::{BUF_LEN_U64, ChaCha8Djb, SEED_LEN_U8};
+use core::fmt;
+use core::fmt::Debug;
+use core::fmt::Formatter;
 use core::mem::MaybeUninit;
 use getrandom::fill;
 
@@ -12,6 +15,12 @@ pub struct SecureRng {
     buf: [u64; BUF_LEN_U64],
     index: usize,
     internal: ChaCha8Djb,
+}
+
+impl Debug for SecureRng {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str("all `SecureRng` fields are private")
+    }
 }
 
 impl SecureYARandGenerator for SecureRng {
