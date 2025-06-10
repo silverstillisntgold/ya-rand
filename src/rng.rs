@@ -1,6 +1,5 @@
-use crate::util::wide_mul;
+use crate::util::{as_raw_bytes_mut, wide_mul};
 use core::ptr::swap;
-use core::slice::from_raw_parts_mut;
 
 #[cfg(feature = "alloc")]
 use {
@@ -67,11 +66,7 @@ pub trait SecureYARandGenerator: YARandGenerator {
     #[inline]
     unsafe fn fill_raw<T>(&mut self, dst: &mut [T]) {
         // SAFETY: The caller has promised not to be a fucking dumbass.
-        let dst_as_bytes = unsafe {
-            let data = dst.as_mut_ptr().cast();
-            let len = dst.len() * size_of::<T>();
-            from_raw_parts_mut(data, len)
-        };
+        let dst_as_bytes = unsafe { as_raw_bytes_mut(dst) };
         self.fill_bytes(dst_as_bytes);
     }
 

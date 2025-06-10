@@ -16,7 +16,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 default = ["std"]
 alloc = []
 inline = []
-# TODO: Remove when AVX512 is moved to stable in rust 1.89
+# TODO: Remove when AVX512 is stabilized in rust 1.89
 nightly = ["chachacha/nightly"]
 std = ["alloc", "getrandom/std"]
 

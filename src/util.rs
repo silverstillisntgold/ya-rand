@@ -2,6 +2,20 @@ use core::mem::size_of;
 use core::slice::from_raw_parts_mut;
 use getrandom::{Error, fill};
 
+/// Utility function for converting `slice` into a mutable slice of bytes.
+///
+/// # Safety
+///
+/// `T` must be valid as nothing more than a collection of bytes.
+#[inline]
+pub unsafe fn as_raw_bytes_mut<T>(slice: &mut [T]) -> &mut [u8] {
+    unsafe {
+        let data = slice.as_mut_ptr().cast();
+        let len = slice.len() * size_of::<T>();
+        from_raw_parts_mut(data, len)
+    }
+}
+
 /// Returns an array filled with pseudo-random data from the output of
 /// a SplitMix64 PRNG, which is seeded using `seed`.
 #[inline]
@@ -24,11 +38,7 @@ pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
 pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], Error> {
     let mut state = [0; SIZE];
     // SAFETY: I'm over here strokin' my dick I got lotion on my dick right now.
-    let state_as_bytes = unsafe {
-        let data = state.as_mut_ptr().cast();
-        let len = state.len() * size_of::<u64>();
-        from_raw_parts_mut(data, len)
-    };
+    let state_as_bytes = unsafe { as_raw_bytes_mut(&mut state) };
     fill(state_as_bytes)?;
     Ok(state)
 }
