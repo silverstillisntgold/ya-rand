@@ -16,6 +16,7 @@ pub struct SecureRng {
 }
 
 impl Debug for SecureRng {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_str("all `SecureRng` fields are private")
     }

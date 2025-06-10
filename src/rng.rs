@@ -234,9 +234,6 @@ pub trait YARandGenerator: Sized {
     }
 
     /// Returns a uniformly distributed `usize` in the interval \[0, `usize::MAX`\].
-    ///
-    /// On 64-bit systems, this is identical to calling `u64`.
-    /// On 32-bit systems, this is identical to calling `u32`.
     #[inline]
     fn usize(&mut self) -> usize {
         self.bits(usize::BITS) as usize
