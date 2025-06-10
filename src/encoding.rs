@@ -1,15 +1,17 @@
-/// Specifies parameters for encoding random data into a valid utf-8 `String`.
+use crate::rng::ALPHANUMERIC;
+
+/// Specifies parameters for encoding random data into a valid UTF-8 `String`.
 ///
 /// All provided implementations list their minimum secure length
 /// in the documentation of their unit struct, and it is highly recommended
-/// that custom implementations do the same.
+/// that custom implementations all do the same.
 ///
 /// # Safety
 ///
-/// The `CHARSET` field must only contain valid ascii characters.
-/// Meaning that all u8 values must be in the interval [0, 128).
-/// Failure to uphold this condition will result in `text` methods
-/// returning invalid `String` values.
+/// The `CHARSET` field must only contain valid ascii characters,
+/// meaning that all u8 values must be in the interval [0, 128).
+/// Failure to uphold this condition will result in generation of
+/// invalid `String values`.
 ///
 /// The `MIN_LEN` field must be at least ceil(log<sub>`base`</sub>(2<sup>128</sup>)),
 /// where `base` is the length of the `CHARSET` field. Failure to uphold
@@ -52,7 +54,7 @@ unsafe impl Encoder for Base64URL {
 /// Minimum secure length is 22.
 pub struct Base62;
 unsafe impl Encoder for Base62 {
-    const CHARSET: &[u8] = crate::rng::ALPHANUMERIC;
+    const CHARSET: &[u8] = ALPHANUMERIC;
 
     const MIN_LEN: usize = 22;
 }

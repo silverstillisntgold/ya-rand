@@ -1,8 +1,6 @@
 use crate::rng::*;
 use chachacha::{BUF_LEN_U64, ChaCha8Djb, SEED_LEN_U8};
-use core::fmt;
-use core::fmt::Debug;
-use core::fmt::Formatter;
+use core::fmt::{self, Debug, Formatter};
 use core::mem::MaybeUninit;
 use getrandom::fill;
 

@@ -5,7 +5,7 @@ use core::slice::from_raw_parts_mut;
 #[cfg(feature = "alloc")]
 use {
     crate::ya_rand_encoding::Encoder,
-    alloc::{boxed::Box, string::String, vec::Vec},
+    alloc::{string::String, vec, vec::Vec},
 };
 
 const F64_MANT: u32 = f64::MANTISSA_DIGITS;
@@ -119,9 +119,9 @@ pub trait SecureYARandGenerator: YARandGenerator {
         match len >= E::MIN_LEN {
             true => Some({
                 const BYTE_VALUES: usize = 1 << u8::BITS;
-                // SAFETY: u8's are a trivial type and we pwomise to
-                // always overwrite all of them UwU.
-                let mut data = unsafe { Box::new_uninit_slice(len).assume_init().into_vec() };
+                // TODO: Test if forcing page faulting with non-zero
+                // initializer improves perfermance.
+                let mut data = vec![0; len];
                 // This branch is evaluated at compile time, so concrete
                 // implementations in final binaries will only have the
                 // contents of the branch suitable for the encoder used.
@@ -235,13 +235,13 @@ pub trait YARandGenerator: Sized {
     /// ```
     #[inline]
     fn new() -> Self {
-        Self::try_new().expect(
-            "WARNING: retrieving random data from the operating system should never fail; \
-            something has gone terribly wrong",
-        )
+        Self::try_new().expect("retrieving random data from the operating system should never fail")
     }
 
-    /// Returns a uniformly distributed `usize` in the interval [0, `usize::MAX`)
+    /// Returns a uniformly distributed `usize` in the interval \[0, `usize::MAX`\].
+    ///
+    /// On 64-bit systems, this is identical to calling `u64`.
+    /// On 32-bit systems, this is identical to calling `u32`.
     #[inline]
     fn usize(&mut self) -> usize {
         self.bits(usize::BITS) as usize
