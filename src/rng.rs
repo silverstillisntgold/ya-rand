@@ -241,6 +241,12 @@ pub trait YARandGenerator: Sized {
         )
     }
 
+    /// Returns a uniformly distributed `usize` in the interval [0, `usize::MAX`)
+    #[inline]
+    fn usize(&mut self) -> usize {
+        self.bits(usize::BITS) as usize
+    }
+
     /// Returns a uniformly distributed `u32` in the interval [0, 2<sup>32</sup>).
     #[inline]
     fn u32(&mut self) -> u32 {
