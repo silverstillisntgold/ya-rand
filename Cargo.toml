@@ -1,6 +1,6 @@
 [package]
 name = "ya-rand"
-version = "1.5.0"
+version = "1.5.1"
 edition = "2024"
 description = "A crate for simple and fast random number generation"
 documentation = "https://docs.rs/ya-rand"
@@ -13,15 +13,16 @@ license = "MIT"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [features]
-default = ["std"]
+default = ["secure", "std"]
 alloc = []
 inline = []
 # TODO: Remove when AVX512 is stabilized in rust 1.89
-nightly = ["chachacha/nightly"]
+nightly = ["chachacha?/nightly"]
+secure = ["chachacha"]
 std = ["alloc", "getrandom/std"]
 
 [dependencies]
-chachacha = "0.3"
+chachacha = { version = "0.3", optional = true }
 getrandom = "0.3"
 
 [dev-dependencies]

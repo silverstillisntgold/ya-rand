@@ -187,12 +187,14 @@ pub mod ya_rand_encoding {
 }
 
 mod rng;
+#[cfg(feature = "secure")]
 mod secure;
 mod util;
 mod xoshiro256pp;
 mod xoshiro512pp;
 
 pub use rng::{SecureYARandGenerator, SeedableYARandGenerator, YARandGenerator};
+#[cfg(feature = "secure")]
 pub use secure::SecureRng;
 pub use xoshiro256pp::Xoshiro256pp;
 pub use xoshiro512pp::Xoshiro512pp;
@@ -211,6 +213,7 @@ pub fn new_rng() -> ShiroRng {
 /// The recommended way to create new CRNG instances.
 ///
 /// Identical to calling [`SecureRng::new`].
+#[cfg(feature = "secure")]
 #[inline]
 pub fn new_rng_secure() -> SecureRng {
     SecureRng::new()
