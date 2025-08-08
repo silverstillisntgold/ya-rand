@@ -102,7 +102,7 @@ assert!(s.len() == Base16::MIN_LEN);
     `no_std` environments that provide allocation primitives. Enables random generation of secure
     `String` values when using [`SecureRng`].
 * **inline** -
-    Marks all [`YARandGenerator::u64`] implementations with #\[inline\]. Should generally increase
+    Marks all [`Generator::u64`] implementations with #\[inline\]. Should generally increase
     runtime performance at the cost of binary size and compile time.
     You'll have to test your specific use case to determine if this feature is worth it for you;
     all the RNGs provided tend to be plenty fast without additional inlining.
@@ -126,7 +126,7 @@ This approach is unbiased and quite fast, but for very large bounds performance 
 since the algorithm may need to sample the underlying RNG multiple times to get an unbiased result.
 But this is just a byproduct of how the underlying algorithm works, and isn't something you should ever be
 worried about when using the aforementioned methods, since these resamples are few and far between.
-If your bound happens to be a power of 2, always use [`YARandGenerator::bits`], since it's nothing more
+If your bound happens to be a power of 2, always use [`Generator::bits`], since it's nothing more
 than a bit-shift of the original `u64` provided by the RNG, and will always be as fast as possible.
 
 Floating point values (besides the normal and exponential distributions) are uniformly distributed,
@@ -191,7 +191,7 @@ mod util;
 mod xoshiro256pp;
 mod xoshiro512pp;
 
-pub use rng::{SecureYARandGenerator, SeedableYARandGenerator, YARandGenerator};
+pub use rng::{Generator, SecureGenerator, SeedableGenerator};
 #[cfg(feature = "secure")]
 pub use secure::SecureRng;
 pub use xoshiro256pp::Xoshiro256pp;

@@ -19,14 +19,14 @@ impl Default for Xoshiro512pp {
     }
 }
 
-impl SeedableYARandGenerator for Xoshiro512pp {
+impl SeedableGenerator for Xoshiro512pp {
     fn new_with_seed(seed: u64) -> Self {
         let state = state_from_seed(seed);
         Self { state }
     }
 }
 
-impl YARandGenerator for Xoshiro512pp {
+impl Generator for Xoshiro512pp {
     #[inline]
     fn try_new() -> Result<Self, getrandom::Error> {
         let state = state_from_entropy()?;

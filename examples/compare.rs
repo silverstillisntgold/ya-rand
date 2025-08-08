@@ -145,7 +145,7 @@ struct SecureStdRng {
     internal: StdRng,
 }
 
-impl YARandGenerator for SecureStdRng {
+impl Generator for SecureStdRng {
     fn try_new() -> Result<Self, getrandom::Error> {
         let mut data = <StdRng as SeedableRng>::Seed::default();
         getrandom::fill(&mut data)?;
@@ -165,7 +165,7 @@ struct SecureChaCha20 {
     internal: ChaCha8Rng,
 }
 
-impl YARandGenerator for SecureChaCha20 {
+impl Generator for SecureChaCha20 {
     fn try_new() -> Result<Self, getrandom::Error> {
         let mut data = <ChaCha8Rng as SeedableRng>::Seed::default();
         getrandom::fill(&mut data)?;

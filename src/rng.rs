@@ -16,7 +16,7 @@ const F32_DIVISOR: f32 = F32_MAX_PRECISE as f32;
 pub const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 /// Trait for RNGs that provide cryptographically secure data.
-pub trait SecureYARandGenerator: YARandGenerator {
+pub trait SecureGenerator: Generator {
     /// Fills `dst` with random data, which is safe to be used in cryptographic contexts.
     ///
     /// # Examples
@@ -33,7 +33,7 @@ pub trait SecureYARandGenerator: YARandGenerator {
 
     /// Fills `dst` with random data, which is safe to be used in cryptographic contexts.
     ///
-    /// Differs from [`SecureYARandGenerator::fill_bytes`] in that the underlying type of `dst`
+    /// Differs from [`SecureGenerator::fill_bytes`] in that the underlying type of `dst`
     /// doesn't need to be any specific type.
     ///
     /// # Examples
@@ -153,7 +153,7 @@ pub trait SecureYARandGenerator: YARandGenerator {
 }
 
 /// Trait for RNGs that can be created from a user-provided seed.
-pub trait SeedableYARandGenerator: YARandGenerator + Default {
+pub trait SeedableGenerator: Generator + Default {
     /// Creates a generator from the output of an internal PRNG,
     /// which is itself seeded from `seed`.
     ///
@@ -182,10 +182,10 @@ pub trait SeedableYARandGenerator: YARandGenerator + Default {
 }
 
 /// Base trait that all RNGs must implement.
-pub trait YARandGenerator: Sized {
+pub trait Generator: Sized {
     /// Creates a generator using randomness provided by the OS.
     ///
-    /// Unlike [`YARandGenerator::new`], which will panic on failure, `try_new`
+    /// Unlike [`Generator::new`], which will panic on failure, `try_new`
     /// propagates the error-handling responsibility to the user. But the probability
     /// of your operating systems RNG failing is absurdly low, and in the rare case that it
     /// does fail, that's not really an issue most users are going to be able to address.
@@ -295,7 +295,7 @@ pub trait YARandGenerator: Sized {
 
     /// Returns a uniformly distributed `u64` in the interval [0, `max`).
     ///
-    /// Using [`YARandGenerator::bits`] when `max` happens to be a power of 2
+    /// Using [`Generator::bits`] when `max` happens to be a power of 2
     /// will be significantly faster.
     ///
     /// # Examples
@@ -618,7 +618,7 @@ pub trait YARandGenerator: Sized {
     /// Clones `slice` into a new `Vec`, performs a Fisher-Yates
     /// shuffle on it's contents, and returns the result.
     ///
-    /// See [`YARandGenerator::shuffle`] for details/examples.
+    /// See [`Generator::shuffle`] for details/examples.
     #[cfg(feature = "alloc")]
     #[inline]
     fn shuffle_cloned<T: Clone>(&mut self, slice: &[T]) -> Vec<T> {

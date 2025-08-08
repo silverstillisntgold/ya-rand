@@ -21,7 +21,7 @@ impl fmt::Debug for SecureRng {
     }
 }
 
-impl SecureYARandGenerator for SecureRng {
+impl SecureGenerator for SecureRng {
     #[inline]
     fn fill_bytes(&mut self, dst: &mut [u8]) {
         // The `chachacha` crate provides a thoroughly tested and
@@ -30,7 +30,7 @@ impl SecureYARandGenerator for SecureRng {
     }
 }
 
-impl YARandGenerator for SecureRng {
+impl Generator for SecureRng {
     #[inline]
     fn try_new() -> Result<Self, getrandom::Error> {
         // We randomize **all** bits of the matrix, even the counter.
