@@ -185,6 +185,7 @@ pub mod ya_rand_encoding {
 }
 
 mod rng;
+mod romuquad;
 #[cfg(feature = "secure")]
 mod secure;
 mod util;
@@ -192,6 +193,7 @@ mod xoshiro256pp;
 mod xoshiro512pp;
 
 pub use rng::{Generator, SecureGenerator, SeedableGenerator};
+pub use romuquad::RomuQuad;
 #[cfg(feature = "secure")]
 pub use secure::SecureRng;
 pub use xoshiro256pp::Xoshiro256pp;

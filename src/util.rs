@@ -15,7 +15,7 @@ pub unsafe fn as_raw_bytes_mut<T>(slice: &mut [T]) -> &mut [u8] {
 
 /// Return an array filled with pseudo-random data from the output of
 /// a SplitMix64 PRNG, which is seeded using `seed`.
-#[inline]
+#[inline(never)]
 pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
     let mut state = [0; SIZE];
     let mut x = seed;

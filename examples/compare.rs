@@ -101,17 +101,17 @@ fn main() {
         "Filling a slice with {} values || Average nanoseconds per value generated:\n\
          ----------------------------------------------------------------\n\
          Sequential (local) `rand`       (secure) average time: {:>5.2}\n\
-         Sequential (local) `fastrand` (insecure) average time: {:>5.2}\n\
-         Sequential (local) `ya-rand`  (insecure) average time: {:>5.2} <-- You are here\n\
+         Sequential (local) `fastrand` (unsecure) average time: {:>5.2}\n\
+         Sequential (local) `ya-rand`  (unsecure) average time: {:>5.2} <-- You are here\n\
          Sequential (local) `ya-rand`    (secure) average time: {:>5.2} <-- and here\n\
          Sequential (local) `chacha20`   (secure) average time: {:>5.2}\n\
-         Sequential (local) `oorandom` (insecure) average time: {:>5.2}\n\
+         Sequential (local) `oorandom` (unsecure) average time: {:>5.2}\n\
          \n\
          Sequential (TLS)   `rand`       (secure) average time: {:>5.2} <-- How most people use `rand`\n\
-         Sequential (TLS)   `fastrand` (insecure) average time: {:>5.2}\n\
+         Sequential (TLS)   `fastrand` (unsecure) average time: {:>5.2}\n\
          \n\
          Parallel   (TLS)   `rand`       (secure) average time: {:>5.2}\n\
-         Parallel   (TLS)   `fastrand` (insecure) average time: {:>5.2}\n\
+         Parallel   (TLS)   `fastrand` (unsecure) average time: {:>5.2}\n\
          ----------------------------------------------------------------\n",
         ITERATIONS,
         sequential_local_rand,

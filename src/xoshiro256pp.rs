@@ -1,9 +1,9 @@
-use crate::rng::*;
-use crate::util::*;
+use crate::rng::{Generator, SeedableGenerator};
+use crate::util;
 
 /// Rust implementation of the xoshiro256++ PRNG.
 ///
-/// This generator is fast, high-quality, and small,
+/// This generator is very fast, high-quality, and small,
 /// but not cryptographically secure.
 ///
 /// More information can be found at: <https://prng.di.unimi.it/>.
@@ -13,7 +13,6 @@ pub struct Xoshiro256pp {
 }
 
 impl Default for Xoshiro256pp {
-    #[inline]
     fn default() -> Self {
         Self::new_with_seed(0)
     }
@@ -21,15 +20,17 @@ impl Default for Xoshiro256pp {
 
 impl SeedableGenerator for Xoshiro256pp {
     fn new_with_seed(seed: u64) -> Self {
-        let state = state_from_seed(seed);
-        Self { state }
+        let state = util::state_from_seed(seed);
+        let mut ret = Self { state };
+        let _discard_first = ret.u64();
+        ret
     }
 }
 
 impl Generator for Xoshiro256pp {
     #[inline]
     fn try_new() -> Result<Self, getrandom::Error> {
-        let state = state_from_entropy()?;
+        let state = util::state_from_entropy()?;
         Ok(Self { state })
     }
 
@@ -39,14 +40,14 @@ impl Generator for Xoshiro256pp {
             .wrapping_add(self.state[3])
             .rotate_left(23)
             .wrapping_add(self.state[0]);
-        let temp = self.state[1] << 17;
+        let tmp = self.state[1] << 17;
 
         self.state[2] ^= self.state[0];
         self.state[3] ^= self.state[1];
         self.state[1] ^= self.state[2];
         self.state[0] ^= self.state[3];
 
-        self.state[2] ^= temp;
+        self.state[2] ^= tmp;
         self.state[3] = self.state[3].rotate_left(45);
 
         result

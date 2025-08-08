@@ -1,9 +1,9 @@
-use crate::rng::*;
-use crate::util::*;
+use crate::rng::{Generator, SeedableGenerator};
+use crate::util;
 
 /// Rust implementation of the xoshiro512++ PRNG.
 ///
-/// This generator is fast, high-quality, and small,
+/// This generator is very fast, high-quality, and small,
 /// but not cryptographically secure.
 ///
 /// More information can be found at: <https://prng.di.unimi.it/>.
@@ -13,7 +13,6 @@ pub struct Xoshiro512pp {
 }
 
 impl Default for Xoshiro512pp {
-    #[inline]
     fn default() -> Self {
         Self::new_with_seed(0)
     }
@@ -21,15 +20,17 @@ impl Default for Xoshiro512pp {
 
 impl SeedableGenerator for Xoshiro512pp {
     fn new_with_seed(seed: u64) -> Self {
-        let state = state_from_seed(seed);
-        Self { state }
+        let state = util::state_from_seed(seed);
+        let mut ret = Self { state };
+        let _discard_first = ret.u64();
+        ret
     }
 }
 
 impl Generator for Xoshiro512pp {
     #[inline]
     fn try_new() -> Result<Self, getrandom::Error> {
-        let state = state_from_entropy()?;
+        let state = util::state_from_entropy()?;
         Ok(Self { state })
     }
 
@@ -39,7 +40,7 @@ impl Generator for Xoshiro512pp {
             .wrapping_add(self.state[2])
             .rotate_left(17)
             .wrapping_add(self.state[2]);
-        let temp = self.state[1] << 11;
+        let tmp = self.state[1] << 11;
 
         self.state[2] ^= self.state[0];
         self.state[5] ^= self.state[1];
@@ -50,7 +51,7 @@ impl Generator for Xoshiro512pp {
         self.state[0] ^= self.state[6];
         self.state[6] ^= self.state[7];
 
-        self.state[6] ^= temp;
+        self.state[6] ^= tmp;
         self.state[7] = self.state[7].rotate_left(21);
 
         result
