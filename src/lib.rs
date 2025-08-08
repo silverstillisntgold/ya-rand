@@ -219,7 +219,7 @@ mod tests {
     use super::*;
     use alloc::collections::BTreeSet;
 
-    const ITERATIONS: usize = 10007;
+    const ITERATIONS: usize = 12357;
     const ITERATIONS_LONG: usize = 1 << 24;
 
     #[test]
