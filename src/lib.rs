@@ -175,15 +175,7 @@ rustc can trivially remove the failure branch when compiling binaries for those 
 extern crate alloc;
 
 #[cfg(feature = "alloc")]
-mod encoding;
-
-/// Module providing the [`Encoder`](crate::encoding::Encoder) trait and concrete implementations
-/// of the [RFC 4648](https://datatracker.ietf.org/doc/html/rfc4648) encoding schemes.
-#[cfg(feature = "alloc")]
-pub mod ya_rand_encoding {
-    pub use super::encoding::*;
-}
-
+pub mod encoding;
 mod rng;
 mod romuquad;
 mod romutrio;
@@ -223,9 +215,9 @@ pub fn new_rng_secure() -> SecureRng {
 
 #[cfg(test)]
 mod tests {
+    use super::encoding::*;
     use super::*;
     use alloc::collections::BTreeSet;
-    use ya_rand_encoding::*;
 
     const ITERATIONS: usize = 10007;
     const ITERATIONS_LONG: usize = 1 << 24;
@@ -297,7 +289,7 @@ mod tests {
 
     #[test]
     fn text_base64_url() {
-        test_text::<Base64URL>();
+        test_text::<Base64Url>();
     }
 
     #[test]
@@ -318,11 +310,6 @@ mod tests {
     #[test]
     fn text_base16() {
         test_text::<Base16>();
-    }
-
-    #[test]
-    fn text_base16_lowercase() {
-        test_text::<Base16Lowercase>();
     }
 
     fn test_text<E: Encoder>() {

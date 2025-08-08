@@ -1,3 +1,8 @@
+/*!
+Provides the [`Encoder`] trait and concrete implementations of the
+[RFC 4648](https://datatracker.ietf.org/doc/html/rfc4648) encoding schemes.
+*/
+
 use crate::rng::ALPHANUMERIC;
 
 /// Specifies parameters for encoding random data into a valid UTF-8 `String`.
@@ -11,7 +16,7 @@ use crate::rng::ALPHANUMERIC;
 /// The `CHARSET` field must only contain valid ascii characters,
 /// meaning that all u8 values must be in the interval [0, 128).
 /// Failure to uphold this condition will result in generation of
-/// invalid `String values`.
+/// invalid `String` values.
 ///
 /// The `MIN_LEN` field must be at least ceil(log<sub>`base`</sub>(2<sup>128</sup>)),
 /// where `base` is the length of the `CHARSET` field. Failure to uphold
@@ -35,17 +40,15 @@ pub unsafe trait Encoder {
 pub struct Base64;
 unsafe impl Encoder for Base64 {
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
     const MIN_LEN: usize = 22;
 }
 
 /// Base64 (URLs and filenames) encoding, as specified by RFC 4648.
 ///
 /// Minimum secure length is 22.
-pub struct Base64URL;
-unsafe impl Encoder for Base64URL {
+pub struct Base64Url;
+unsafe impl Encoder for Base64Url {
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-
     const MIN_LEN: usize = 22;
 }
 
@@ -55,7 +58,6 @@ unsafe impl Encoder for Base64URL {
 pub struct Base62;
 unsafe impl Encoder for Base62 {
     const CHARSET: &[u8] = ALPHANUMERIC;
-
     const MIN_LEN: usize = 22;
 }
 
@@ -65,7 +67,6 @@ unsafe impl Encoder for Base62 {
 pub struct Base32;
 unsafe impl Encoder for Base32 {
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-
     const MIN_LEN: usize = 26;
 }
 
@@ -75,7 +76,6 @@ unsafe impl Encoder for Base32 {
 pub struct Base32Hex;
 unsafe impl Encoder for Base32Hex {
     const CHARSET: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUV";
-
     const MIN_LEN: usize = 26;
 }
 
@@ -85,16 +85,5 @@ unsafe impl Encoder for Base32Hex {
 pub struct Base16;
 unsafe impl Encoder for Base16 {
     const CHARSET: &[u8] = b"0123456789ABCDEF";
-
-    const MIN_LEN: usize = 32;
-}
-
-/// Base16 (lowercase hexidecimal) encoding.
-///
-/// Minimum secure length is 32.
-pub struct Base16Lowercase;
-unsafe impl Encoder for Base16Lowercase {
-    const CHARSET: &[u8] = b"0123456789abcdef";
-
     const MIN_LEN: usize = 32;
 }

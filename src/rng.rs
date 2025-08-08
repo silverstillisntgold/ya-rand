@@ -1,9 +1,9 @@
-use crate::util::{as_raw_bytes_mut, wide_mul};
-use core::ptr::swap;
+use crate::util;
+use core::ptr;
 
 #[cfg(feature = "alloc")]
 use {
-    crate::ya_rand_encoding::Encoder,
+    crate::encoding::Encoder,
     alloc::{string::String, vec, vec::Vec},
 };
 
@@ -66,7 +66,7 @@ pub trait SecureGenerator: Generator {
     #[inline]
     unsafe fn fill_raw<T>(&mut self, dst: &mut [T]) {
         // SAFETY: The caller has promised not to be a fucking dumbass.
-        let dst_as_bytes = unsafe { as_raw_bytes_mut(dst) };
+        let dst_as_bytes = unsafe { util::as_raw_bytes_mut(dst) };
         self.fill_bytes(dst_as_bytes);
     }
 
@@ -315,14 +315,14 @@ pub trait Generator: Sized {
     #[inline]
     fn bound(&mut self, max: u64) -> u64 {
         // Lemire's nearly divisionless method: https://arxiv.org/abs/1805.10941.
-        let (mut high, mut low) = wide_mul(self.u64(), max);
+        let (mut high, mut low) = util::wide_mul(self.u64(), max);
         match low < max {
             false => {}
             true => {
                 // The dreaded division.
                 let threshold = max.wrapping_neg() % max;
                 while low < threshold {
-                    (high, low) = wide_mul(self.u64(), max);
+                    (high, low) = util::wide_mul(self.u64(), max);
                 }
             }
         }
@@ -610,7 +610,7 @@ pub trait Generator: Sized {
             // bounded by slice length; index 'j' will always be
             // in bounds because it's bounded by 'i'.
             unsafe {
-                swap(slice_ptr.add(i), slice_ptr.add(j));
+                ptr::swap(slice_ptr.add(i), slice_ptr.add(j));
             }
         }
     }
