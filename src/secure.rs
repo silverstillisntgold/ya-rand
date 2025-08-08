@@ -1,8 +1,7 @@
 use crate::rng::*;
 use chachacha::{BUF_LEN_U64, ChaCha8Djb, SEED_LEN_U8};
-use core::fmt::{self, Debug, Formatter};
+use core::fmt;
 use core::mem::MaybeUninit;
-use getrandom::fill;
 
 /// A cryptographically secure random number generator.
 ///
@@ -15,9 +14,9 @@ pub struct SecureRng {
     internal: ChaCha8Djb,
 }
 
-impl Debug for SecureRng {
+impl fmt::Debug for SecureRng {
     #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("all `SecureRng` fields are private")
     }
 }
@@ -39,7 +38,7 @@ impl YARandGenerator for SecureRng {
         // but since this is exclusively for use as a CRNG it's fine.
         #[allow(invalid_value)]
         let mut state = unsafe { MaybeUninit::<[u8; SEED_LEN_U8]>::uninit().assume_init() };
-        fill(&mut state)?;
+        getrandom::fill(&mut state)?;
         let mut internal = ChaCha8Djb::from(state);
         let buf = internal.get_block_u64();
         let index = 0;

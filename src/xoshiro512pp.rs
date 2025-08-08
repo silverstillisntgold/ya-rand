@@ -2,6 +2,7 @@ use crate::rng::*;
 use crate::util::*;
 
 /// Rust implementation of the xoshiro512++ PRNG.
+///
 /// This generator is fast, high-quality, and small,
 /// but not cryptographically secure.
 ///

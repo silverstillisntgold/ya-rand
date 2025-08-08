@@ -106,8 +106,6 @@ assert!(s.len() == Base16::MIN_LEN);
     runtime performance at the cost of binary size and compile time.
     You'll have to test your specific use case to determine if this feature is worth it for you;
     all the RNGs provided tend to be plenty fast without additional inlining.
-* **nightly** -
-    Enables AVX512F [`SecureRng`] implementation on targets that support it.
 
 ## Details
 
