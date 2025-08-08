@@ -1,4 +1,4 @@
-use crate::rng::*;
+use crate::rng::{Generator, SecureGenerator};
 use chachacha::{BUF_LEN_U64, ChaCha8Djb, SEED_LEN_U8};
 use core::fmt;
 use core::mem::MaybeUninit;
@@ -6,7 +6,7 @@ use core::mem::MaybeUninit;
 /// A cryptographically secure random number generator.
 ///
 /// The current implementation uses ChaCha with 8 rounds and a 64-bit counter.
-/// This allows for 1 ZiB (2<sup>70</sup> bytes) of output before cycling.
+/// This allows for 1 ZiB (2<sup>70</sup> bytes) of output before repeating.
 /// That's over 147 **quintillion** calls to [`SecureRng::u64`].
 pub struct SecureRng {
     buf: [u64; BUF_LEN_U64],
@@ -33,9 +33,8 @@ impl SecureGenerator for SecureRng {
 impl Generator for SecureRng {
     #[inline]
     fn try_new() -> Result<Self, getrandom::Error> {
-        // We randomize **all** bits of the matrix, even the counter.
-        // If used as a cipher this approach is completely braindead,
-        // but since this is exclusively for use as a CRNG it's fine.
+        // We want to randomize **all** bits of the matrix, even the counter.
+        // They're all going to be overwritten so no need to initialize them.
         #[allow(invalid_value)]
         let mut state = unsafe { MaybeUninit::<[u8; SEED_LEN_U8]>::uninit().assume_init() };
         getrandom::fill(&mut state)?;
@@ -51,17 +50,15 @@ impl Generator for SecureRng {
 
     #[cfg_attr(feature = "inline", inline)]
     fn u64(&mut self) -> u64 {
-        // TODO: This is the cold path, occuring only once every
-        // 32 calls to `Self::u64`. If there is ever a cold/unlikely
-        // intrinsic moved to stable then test the performance impact
-        // of applying it to this branch.
+        // TODO: Use the `unlikely` hint when it comes to stable.
         if self.index >= self.buf.len() {
             self.index = 0;
             self.internal.fill_block_u64(&mut self.buf);
         }
-        // Bounds check is elided thanks to above code.
-        let result = self.buf[self.index];
+        // SAFETY: We've just guaranteed that `self.index` will be
+        // in bounds in the above if-statement.
+        let ret = unsafe { *self.buf.get_unchecked(self.index) };
         self.index += 1;
-        result
+        ret
     }
 }
