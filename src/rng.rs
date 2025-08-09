@@ -71,14 +71,17 @@ pub trait SecureGenerator: Generator {
     }
 
     /// Generates a random `String` with length `len`, using the provided
-    /// `Encoder` to determine character set and minimum secure length. Since
+    /// `Encoder` to determine character set and minimum secure length. Because
     /// character sets can only contain valid ascii values, the length of the created
     /// `String` reprensents both the size of the `String` in bytes, and the
     /// amount of characters it contains.
     ///
-    /// All provided encoders are accessible through [`crate::ya_rand_encoding`].
-    /// Users wishing to implement their own encoding must do so through the
-    /// [`Encoder`](crate::ya_rand_encoding::Encoder) trait.
+    /// Values of `len` which are less than what would be considered secure for the
+    /// `Encoder` being used will be silently promoted to the minimum secure length.
+    ///
+    /// All provided encoders are accessible via [`crate::encoding`].
+    /// Users wishing to implement their own encoding scheme must do so
+    /// through the [`Encoder`] trait.
     ///
     /// Originally inspired by golang's addition of [`rand.Text`] in release 1.24,
     /// but altered to be encoding/length generic and unbiased for non-trivial bases.
@@ -107,38 +110,35 @@ pub trait SecureGenerator: Generator {
     /// ```
     #[cfg(feature = "alloc")]
     fn text<E: Encoder>(&mut self, len: usize) -> String {
-        let len = len.max(E::MIN_LEN);
         const BYTE_VALUES: usize = 1 << u8::BITS;
-        let mut data = vec![u8::MAX; len];
-        // This branch is evaluated at compile time, so concrete
-        // implementations in final binaries will only have the
-        // contents of the branch suitable for the encoder used.
+        let len = len.max(E::MIN_LEN);
+        // Force all values of the vector to be initialized to a
+        // non-zero value. This guarantees all the allocated memory
+        // will be page-faulted and can massively improve performance
+        // for large allocations.
+        let mut bytes = vec![u8::MAX; len];
         if BYTE_VALUES % E::CHARSET.len() == 0 {
-            self.fill_bytes(&mut data);
+            self.fill_bytes(&mut bytes);
             // Directly map each random u8 to a character in the set.
-            // Since this branch is only reachable when length is a power
-            // of two, the modulo gets optimized out and the whole thing
-            // gets vectorized. The assembly for this branch is
-            // absolutely beautiful.
             // This approach is extremely efficient, but only produces
             // unbiased random sequences when the length of the current
             // `CHARSET` is divisible by the amount of possible u8 values,
             // which is why we need a fallback approach.
-            for d in &mut data {
-                let random_index = *d as usize;
-                *d = E::CHARSET[random_index % E::CHARSET.len()];
+            for cur in &mut bytes {
+                let random_index = *cur as usize;
+                *cur = E::CHARSET[random_index % E::CHARSET.len()];
             }
         } else {
             // Alternative approach that's potentially much slower,
             // but always produces unbiased results.
             // The unwrap gets optimized out since rustc can see that
             // `E::CHARSET` has a non-zero length.
-            data.fill_with(|| *self.choose(E::CHARSET).unwrap());
+            bytes.fill_with(|| *self.choose(E::CHARSET).unwrap());
         }
         // SAFETY: All provided encoders only use ascii values, and
         // custom `Encoder` implementations agree to do the same when
         // implementing the trait.
-        unsafe { String::from_utf8_unchecked(data) }
+        unsafe { String::from_utf8_unchecked(bytes) }
     }
 }
 
