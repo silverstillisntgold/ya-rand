@@ -1,4 +1,4 @@
-/// Convert `slice` into a mutable slice of bytes, providing access
+/// Converts `slice` into a mutable slice of bytes, providing access
 /// to the raw data of the underlying buffer.
 ///
 /// # Safety
@@ -13,7 +13,7 @@ pub unsafe fn as_raw_bytes_mut<T>(slice: &mut [T]) -> &mut [u8] {
     }
 }
 
-/// Return an array filled with pseudo-random data from the output of
+/// Returns an array filled with pseudorandom data from the output of
 /// a SplitMix64 PRNG, which is seeded using `seed`.
 #[inline(never)]
 pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
@@ -30,7 +30,7 @@ pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
     state
 }
 
-/// Attempt to return an array filled with random data from operating system entropy.
+/// Attempts to return an array filled with random data from operating system entropy.
 #[inline]
 pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], getrandom::Error> {
     let mut state = [0; SIZE];
@@ -40,7 +40,7 @@ pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], getrandom:
     Ok(state)
 }
 
-/// Perform 128-bit multiplication on `x` and `y`, returning the
+/// Performs 128-bit multiplication on `x` and `y`, returning the
 /// result as a tuple of `u64` values in the format (high, low).
 #[inline]
 pub fn wide_mul(x: u64, y: u64) -> (u64, u64) {

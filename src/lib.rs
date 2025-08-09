@@ -87,8 +87,8 @@ assert!(0.0 <= val && val < 1.0);
 // Here, we generate a string of random hexidecimal
 // characters (base 16), with the shortest length guaranteed
 // to be secure.
-use ya_rand_encoding::*;
-let s = secure_rng.text::<Base16>(Base16::MIN_LEN).unwrap();
+use ya_rand::encoding::*;
+let s = secure_rng.text::<Base16>(Base16::MIN_LEN);
 assert!(s.len() == Base16::MIN_LEN);
 ```
 
@@ -313,7 +313,7 @@ mod tests {
     }
 
     fn test_text<E: Encoder>() {
-        let s = new_rng_secure().text::<E>(ITERATIONS).unwrap();
+        let s = new_rng_secure().text::<E>(ITERATIONS);
         let distinct_bytes = s.bytes().collect::<BTreeSet<_>>();
         let distinct_chars = s.chars().collect::<BTreeSet<_>>();
 

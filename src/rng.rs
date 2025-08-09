@@ -34,7 +34,7 @@ pub trait SecureGenerator: Generator {
     /// Fills `dst` with random data, which is safe to be used in cryptographic contexts.
     ///
     /// Differs from [`SecureGenerator::fill_bytes`] in that the underlying type of `dst`
-    /// doesn't need to be any specific type.
+    /// doesn't need to be a specific type (see safety comment).
     ///
     /// # Examples
     ///
@@ -76,8 +76,6 @@ pub trait SecureGenerator: Generator {
     /// `String` reprensents both the size of the `String` in bytes, and the
     /// amount of characters it contains.
     ///
-    /// Returns `None` when `len` is less than what the encoder declares to be secure.
-    ///
     /// All provided encoders are accessible through [`crate::ya_rand_encoding`].
     /// Users wishing to implement their own encoding must do so through the
     /// [`Encoder`](crate::ya_rand_encoding::Encoder) trait.
@@ -92,63 +90,55 @@ pub trait SecureGenerator: Generator {
     ///
     /// ```
     /// use ya_rand::*;
-    /// use ya_rand_encoding::Base16Lowercase as B16L;
+    /// use ya_rand::encoding::Base16;
     ///
     /// const LEN: usize = 420;
     /// let mut rng = new_rng_secure();
-    /// // Safe to unwrap because 420 is greater than 32, which
-    /// // is the minimum secure length of `Base16Lowercase`.
-    /// let hex_string = rng.text::<B16L>(LEN).unwrap();
+    /// let hex_string = rng.text::<Base16>(LEN);
     /// assert!(hex_string.len() == LEN);
     /// assert!(hex_string.bytes().count() == LEN);
     /// assert!(hex_string.chars().count() == LEN);
     /// for c in hex_string.bytes() {
     ///     assert!(
     ///         (b'0' <= c && c <= b'9') ||
-    ///         (b'a' <= c && c <= b'f')
+    ///         (b'A' <= c && c <= b'F')
     ///     );
     /// }
     /// ```
     #[cfg(feature = "alloc")]
-    fn text<E: Encoder>(&mut self, len: usize) -> Option<String> {
-        match len >= E::MIN_LEN {
-            true => Some({
-                const BYTE_VALUES: usize = 1 << u8::BITS;
-                // TODO: Test if forcing page faulting with non-zero
-                // initializer improves perfermance.
-                let mut data = vec![0; len];
-                // This branch is evaluated at compile time, so concrete
-                // implementations in final binaries will only have the
-                // contents of the branch suitable for the encoder used.
-                if BYTE_VALUES % E::CHARSET.len() == 0 {
-                    self.fill_bytes(&mut data);
-                    // Directly map each random u8 to a character in the set.
-                    // Since this branch is only reachable when length is a power
-                    // of two, the modulo gets optimized out and the whole thing
-                    // gets vectorized. The assembly for this branch is
-                    // absolutely beautiful.
-                    // This approach is extremely efficient, but only produces
-                    // unbiased random sequences when the length of the current
-                    // `CHARSET` is divisible by the amount of possible u8 values,
-                    // which is why we need a fallback approach.
-                    for d in &mut data {
-                        let random_index = *d as usize;
-                        *d = E::CHARSET[random_index % E::CHARSET.len()];
-                    }
-                } else {
-                    // Alternative approach that's potentially much slower,
-                    // but always produces unbiased results.
-                    // The unwrap gets optimized out since rustc can see that
-                    // `E::CHARSET` has a non-zero length.
-                    data.fill_with(|| *self.choose(E::CHARSET).unwrap());
-                }
-                // SAFETY: All provided encoders only use ascii values, and
-                // custom `Encoder` implementations agree to do the same when
-                // implementing the trait.
-                unsafe { String::from_utf8_unchecked(data) }
-            }),
-            false => None,
+    fn text<E: Encoder>(&mut self, len: usize) -> String {
+        let len = len.max(E::MIN_LEN);
+        const BYTE_VALUES: usize = 1 << u8::BITS;
+        let mut data = vec![u8::MAX; len];
+        // This branch is evaluated at compile time, so concrete
+        // implementations in final binaries will only have the
+        // contents of the branch suitable for the encoder used.
+        if BYTE_VALUES % E::CHARSET.len() == 0 {
+            self.fill_bytes(&mut data);
+            // Directly map each random u8 to a character in the set.
+            // Since this branch is only reachable when length is a power
+            // of two, the modulo gets optimized out and the whole thing
+            // gets vectorized. The assembly for this branch is
+            // absolutely beautiful.
+            // This approach is extremely efficient, but only produces
+            // unbiased random sequences when the length of the current
+            // `CHARSET` is divisible by the amount of possible u8 values,
+            // which is why we need a fallback approach.
+            for d in &mut data {
+                let random_index = *d as usize;
+                *d = E::CHARSET[random_index % E::CHARSET.len()];
+            }
+        } else {
+            // Alternative approach that's potentially much slower,
+            // but always produces unbiased results.
+            // The unwrap gets optimized out since rustc can see that
+            // `E::CHARSET` has a non-zero length.
+            data.fill_with(|| *self.choose(E::CHARSET).unwrap());
         }
+        // SAFETY: All provided encoders only use ascii values, and
+        // custom `Encoder` implementations agree to do the same when
+        // implementing the trait.
+        unsafe { String::from_utf8_unchecked(data) }
     }
 }
 
@@ -161,7 +151,7 @@ pub trait SeedableGenerator: Generator + Default {
     /// seed a generator, you don't.
     /// Instead, use [`crate::new_rng`] when you need to create a new instance.
     ///
-    /// If you have a scenario where you really do need a set seed, prefer to use the
+    /// If you have a scenario where you really do need a set seed, prefer using the
     /// `Default` implementation of the desired generator.
     ///
     /// # Examples
@@ -202,15 +192,6 @@ pub trait Generator: Sized {
     /// It is recommended to use the top-level [`crate::new_rng`] instead
     /// of calling this function on a specific generator type.
     ///
-    /// # Safety
-    ///
-    /// This function will panic if your OS rng fails to provide enough entropy.
-    /// But this is extremely unlikely, and unless you're working at the kernel level it's
-    /// not something you should ever be concerned with.
-    ///
-    /// Since Windows 10 this function is infallible, thanks to modern Windows versions adopting
-    /// a user-space cryptographic architecture that can't fail during runtime.
-    ///
     /// # Examples
     ///
     /// ```
@@ -228,6 +209,15 @@ pub trait Generator: Sized {
     /// assert!(rng1 != rng3);
     /// assert!(rng2 != rng3);
     /// ```
+    ///
+    /// # Safety
+    ///
+    /// This function will panic if your OS rng fails to provide enough entropy.
+    /// But this is extremely unlikely, and unless you're working at the kernel level it's
+    /// not something you should ever be concerned with.
+    ///
+    /// Since Windows 10 this function is infallible, thanks to modern Windows versions adopting
+    /// a user-space cryptographic architecture that can't fail during runtime.
     #[inline]
     fn new() -> Self {
         Self::try_new().expect("retrieving random data from the operating system should never fail")
@@ -317,7 +307,10 @@ pub trait Generator: Sized {
         // Lemire's nearly divisionless method: https://arxiv.org/abs/1805.10941.
         let (mut high, mut low) = util::wide_mul(self.u64(), max);
         match low < max {
-            false => {}
+            false => {
+                // TODO: Use the `unlikely` hint when it get stabilized
+                // to indicate this branch is unlikely.
+            }
             true => {
                 // The dreaded division.
                 let threshold = max.wrapping_neg() % max;
@@ -335,7 +328,7 @@ pub trait Generator: Sized {
 
     /// Returns a uniformly distributed `u64` in the interval \[0, `max`\].
     ///
-    /// It is expected that `max` < `u64::MAX`.
+    /// It is expected that `max` != `u64::MAX`.
     ///
     /// # Examples
     ///
@@ -365,7 +358,7 @@ pub trait Generator: Sized {
 
     /// Returns a uniformly distributed `i64` in the interval \[`min`, `max`\]
     ///
-    /// It is expected that `min` <= `max` and `max` < `u64::MAX`.
+    /// It is expected that `min` <= `max` and `max` != `i64::MAX`.
     #[inline]
     fn range_inclusive(&mut self, min: i64, max: i64) -> i64 {
         self.range(min, max + 1)
@@ -410,9 +403,8 @@ pub trait Generator: Sized {
             // Start with an interval of [0, 2^54)
             x = self.bits(BITS) as i64;
             // Interval is now (0, 2^54)
-            match x != 0 {
-                true => break,
-                false => {}
+            if x != 0 {
+                break;
             }
         }
         // Shift interval to (-2^53, 2^53)
@@ -431,9 +423,8 @@ pub trait Generator: Sized {
             // Start with an interval of [0, 2^25)
             x = self.bits(BITS) as i64;
             // Interval is now (0, 2^25)
-            match x != 0 {
-                true => break,
-                false => {}
+            if x != 0 {
+                break;
             }
         }
         // Shift interval to (-2^24, 2^24)
@@ -456,9 +447,8 @@ pub trait Generator: Sized {
             y = self.f64_wide();
             s = (x * x) + (y * y);
             // Reroll if `s` does not lie **within** the unit circle.
-            match s < 1.0 && s != 0.0 {
-                true => break,
-                false => {}
+            if s < 1.0 && s != 0.0 {
+                break;
             }
         }
         let t = (2.0 * s.ln().abs() / s).sqrt();
@@ -473,10 +463,12 @@ pub trait Generator: Sized {
     #[inline]
     fn f64_normal_distribution(&mut self, mean: f64, stddev: f64) -> (f64, f64) {
         let (x, y) = self.f64_normal();
-        (x.mul_add(stddev, mean), y.mul_add(stddev, mean))
+        let x_adjusted = x.mul_add(stddev, mean);
+        let y_adjusted = y.mul_add(stddev, mean);
+        (x_adjusted, y_adjusted)
     }
 
-    /// Returns an exponentially distributed `f64` with `lambda` of `1.0`.
+    /// Returns an exponentially distributed `f64` with a `lambda` of `1.0`.
     #[cfg(feature = "std")]
     #[inline]
     fn f64_exponential(&mut self) -> f64 {
@@ -513,7 +505,7 @@ pub trait Generator: Sized {
     ///
     /// // Sanity check.
     /// let random_item = rng.choose(&v).expect("vector `v` is not empty");
-    /// assert!(v.contains(random_item));
+    /// assert!(v.contains(random_item) == true);
     ///
     /// // Choose `random_item` from the top half of the array.
     /// let random_item = rng.choose(top).expect("still not empty");
@@ -615,10 +607,8 @@ pub trait Generator: Sized {
         }
     }
 
-    /// Clones `slice` into a new `Vec`, performs a Fisher-Yates
-    /// shuffle on it's contents, and returns the result.
-    ///
-    /// See [`Generator::shuffle`] for details/examples.
+    /// Clones `slice` into a new `Vec`, calls [`Generator::shuffle`]
+    /// on it, and returns the result.
     #[cfg(feature = "alloc")]
     #[inline]
     fn shuffle_cloned<T: Clone>(&mut self, slice: &[T]) -> Vec<T> {
