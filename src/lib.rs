@@ -11,7 +11,7 @@ machine if rust knows what kind of machine to compile for.
 Your best bet is to configure your global .cargo/config.toml with `rustflags = ["-C", "target-cpu=native"]`
 beneath the `[build]` directive.
 
-If you know the [x86 feature level] of the processor that will be running your binaries,
+If you know the [x86 feature level] of the processor that will be executing your binaries,
 it maybe be better to instead configure this directive at the crate level.
 
 [x86 feature level]: https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
