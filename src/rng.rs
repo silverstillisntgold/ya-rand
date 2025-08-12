@@ -61,8 +61,8 @@ pub trait SecureGenerator: Generator {
     /// # Safety
     ///
     /// `T` must be valid as nothing more than a collection of bytes.
-    /// Integer types are the simplest example of this, but structs of integer types
-    /// generally should fall under the same umbrella.
+    /// Integer types are the simplest example of this, but structs of integer
+    /// types generally should fall under the same umbrella.
     #[inline]
     unsafe fn fill_raw<T>(&mut self, dst: &mut [T]) {
         // SAFETY: The caller has promised not to be a fucking dumbass.
@@ -109,14 +109,14 @@ pub trait SecureGenerator: Generator {
     /// }
     /// ```
     #[cfg(feature = "alloc")]
+    #[inline(never)]
     fn text<E: Encoder>(&mut self, len: usize) -> String {
         const BYTE_VALUES: usize = 1 << u8::BITS;
-        let len = len.max(E::MIN_LEN);
         // Force all values of the vector to be initialized to a
         // non-zero value. This guarantees all the allocated memory
         // will be page-faulted and can massively improve performance
-        // for large allocations.
-        let mut bytes = vec![u8::MAX; len];
+        // when encoding long strings.
+        let mut bytes = vec![u8::MAX; len.max(E::MIN_LEN)];
         if BYTE_VALUES % E::CHARSET.len() == 0 {
             self.fill_bytes(&mut bytes);
             // Directly map each random u8 to a character in the set.
@@ -594,6 +594,7 @@ pub trait Generator: Sized {
     /// rng.shuffle(&mut data);
     /// assert!(data.is_sorted() == false);
     /// ```
+    #[inline(never)]
     fn shuffle<T>(&mut self, slice: &mut [T]) {
         let slice_ptr = slice.as_mut_ptr();
         for i in (1..slice.len()).rev() {

@@ -1,6 +1,8 @@
 /*!
-Provides the [`Encoder`] trait and concrete implementations of the
-[RFC 4648](https://datatracker.ietf.org/doc/html/rfc4648) encoding schemes.
+Provides the [`Encoder`] trait, as well as concrete implementations of the
+[RFC 4648] encodings and alphanumeric encoding.
+
+[RFC 4648]: https://datatracker.ietf.org/doc/html/rfc4648
 */
 
 use crate::rng::ALPHANUMERIC;
