@@ -1,7 +1,7 @@
 use crate::util;
 use core::ptr;
 
-#[cfg(feature = "alloc")]
+#[cfg(all(feature = "alloc", feature = "secure"))]
 use {
     crate::encoding::Encoder,
     alloc::{string::String, vec, vec::Vec},
@@ -108,7 +108,7 @@ pub trait SecureGenerator: Generator {
     ///     );
     /// }
     /// ```
-    #[cfg(feature = "alloc")]
+    #[cfg(all(feature = "alloc", feature = "secure"))]
     #[inline(never)]
     fn text<E: Encoder>(&mut self, len: usize) -> String {
         const BYTE_VALUES: usize = 1 << u8::BITS;
@@ -610,7 +610,7 @@ pub trait Generator: Sized {
 
     /// Clones `slice` into a new `Vec`, calls [`Generator::shuffle`]
     /// on it, and returns the result.
-    #[cfg(feature = "alloc")]
+    #[cfg(all(feature = "alloc", feature = "secure"))]
     #[inline]
     fn shuffle_cloned<T: Clone>(&mut self, slice: &[T]) -> Vec<T> {
         let mut v = slice.to_vec();

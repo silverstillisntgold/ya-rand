@@ -5,22 +5,20 @@ Simple and fast pseudo/crypto random number generation.
 ## Performance considerations
 
 The backing CRNG uses compile-time dispatch, so you'll only get the fastest implementation available to the
-machine if rustc knows what kind of machine to compile for.
-If you know the [x86 feature level] of the processor that will be running your binaries, tell rustc to
-target that feature level. On Windows, this means adding `RUSTFLAGS=-C target-cpu=<level>` to your system
-variables in System Properties -> Advanced -> Environment Variables. You can also manually toggle this for
-a single cmd-prompt instance using the [`set`] command. On Unix-based systems the process should be similar.
-If you're only going to run the final binary on your personal machine, replace `<level>` with `native`.
+machine if rust knows what kind of machine to compile for.
 
-If you happen to be building with a nightly toolchain, and for a machine supporting AVX512, the **nightly**
-feature provides an AVX512F implementation of the backing ChaCha algorithm.
+Your best bet is to configure your global .cargo/config.toml with `rustflags = ["-C", "target-cpu=native"]`
+beneath the `[build]` directive.
+
+If you know the [x86 feature level] of the processor that will be running your binaries,
+it maybe be better to instead configure this directive at the crate level.
 
 [x86 feature level]: https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
-[`set`]: https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/set_1
 
 ## Usage
 
-Here are a few examples to get you started.
+Here are a few examples to get you started,
+see https://docs.rs/ya-rand for full documentation and more examples.
 
 ```rust
 use ya_rand::*;
@@ -62,9 +60,7 @@ assert!(0.0 <= val && val < 1.0);
 // Here, we generate a string of random hexidecimal
 // characters (base 16), with the shortest length guaranteed
 // to be secure.
-use ya_rand_encoding::*;
-let s = secure_rng.text::<Base16>(Base16::MIN_LEN).unwrap();
+use ya_rand::encoding::*;
+let s = secure_rng.text::<Base16>(Base16::MIN_LEN);
 assert!(s.len() == Base16::MIN_LEN);
 ```
-
-See https://docs.rs/ya-rand for full documentation and more examples.

@@ -6,29 +6,26 @@ Simple and fast pseudo/crypto random number generation.
 ## Performance considerations
 
 The backing CRNG uses compile-time dispatch, so you'll only get the fastest implementation available to the
-machine if rustc knows what kind of machine to compile for.
-If you know the [x86 feature level] of the processor that will be running your binaries, tell rustc to
-target that feature level. On Windows, this means adding `RUSTFLAGS=-C target-cpu=<level>` to your system
-variables in System Properties -> Advanced -> Environment Variables. You can also manually toggle this for
-a single cmd-prompt instance using the [`set`] command. On Unix-based systems the process should be similar.
-If you're only going to run the final binary on your personal machine, replace `<level>` with `native`.
+machine if rust knows what kind of machine to compile for.
 
-If you happen to be building with a nightly toolchain, and for a machine supporting AVX512, the **nightly**
-feature provides an AVX512F implementation of the backing ChaCha algorithm.
+Your best bet is to configure your global .cargo/config.toml with `rustflags = ["-C", "target-cpu=native"]`
+beneath the `[build]` directive.
+
+If you know the [x86 feature level] of the processor that will be running your binaries,
+it maybe be better to instead configure this directive at the crate level.
 
 [x86 feature level]: https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
-[`set`]: https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/set_1
 
 ## But why?
 
 Because `rand` is very cool and extremely powerful, but kind of an enormous fucking pain in the ass
 to use, and it's far too large and involved for someone who just needs to flip a coin once
-every few minutes. But if you're doing some crazy black magic computational sorcery, it almost
-certainly has something you can use to complete your spell.
+every few minutes. But if you're doing some crazy black magic numerical sorcery, it almost certainly
+has something you can use to complete your spell. Don't be afraid to go there if you need to.
 
 Other crates, like `fastrand`, `tinyrand`, or `oorandom`, fall somewhere between "I'm not sure I trust
 the backing RNG" (state size is too small or algorithm is iffy) and "this API is literally just
-`rand` but far less powerful". I wanted something easy, but also fast and statistically robust.
+`rand` but far less powerful". I wanted something easy to use, but also fast and statistically robust.
 
 So here we are.
 
@@ -101,8 +98,10 @@ assert!(s.len() == Base16::MIN_LEN);
     Enabled by default. Normally enabled through **std**, but can be enabled on it's own for use in
     `no_std` environments that provide allocation primitives. Enables random generation of secure
     `String` values when using [`SecureRng`].
+* **secure** -
+    Enabled by default. Provides [`SecureRng`], which implements [SecureGenerator].
 * **inline** -
-    Marks all [`Generator::u64`] implementations with #\[inline\]. Should generally increase
+    Marks all [`Generator::u64`] implementations with `#[inline]`. Should generally increase
     runtime performance at the cost of binary size and compile time.
     You'll have to test your specific use case to determine if this feature is worth it for you;
     all the RNGs provided tend to be plenty fast without additional inlining.
@@ -171,10 +170,10 @@ rustc can trivially remove the failure branch when compiling binaries for those 
 #![deny(missing_docs)]
 #![no_std]
 
-#[cfg(feature = "alloc")]
+#[cfg(all(feature = "alloc", feature = "secure"))]
 extern crate alloc;
 
-#[cfg(feature = "alloc")]
+#[cfg(all(feature = "alloc", feature = "secure"))]
 pub mod encoding;
 mod rng;
 mod romuquad;
@@ -185,7 +184,7 @@ mod util;
 mod xoshiro256pp;
 mod xoshiro512pp;
 
-pub use rng::{Generator, SecureGenerator, SeedableGenerator};
+pub use self::rng::{Generator, SecureGenerator, SeedableGenerator};
 pub use romuquad::RomuQuad;
 pub use romutrio::RomuTrio;
 #[cfg(feature = "secure")]
