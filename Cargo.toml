@@ -1,6 +1,6 @@
 [package]
 name = "ya-rand"
-version = "1.5.1"
+version = "2.0.0"
 edition = "2024"
 description = "A crate for simple and fast random number generation"
 documentation = "https://docs.rs/ya-rand"
@@ -31,4 +31,4 @@ chacha20 = { version = "=0.10.0-rc.0", default-features = false, features = [
 fastrand = "2.3"
 oorandom = "11.1"
 rand = "0.9"
-rayon = "1.10"
+rayon = "1.11"

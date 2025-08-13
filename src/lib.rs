@@ -31,7 +31,7 @@ So here we are.
 
 ## Usage
 
-Glob import the contents of the library and use [`new_rng`] to create new RNGs wherever
+Import the contents of the library and use [`new_rng`] to create new RNGs wherever
 you need them. Then call whatever method you require on those instances. All methods available
 are directly accessible through any generator instance via the dot operator, and are named
 in a way that should make it easy to quickly identify what you need. See below for a few examples.
@@ -96,10 +96,11 @@ assert!(s.len() == Base16::MIN_LEN);
     distributions, error type conversions for getrandom, and the **alloc** feature.
 * **alloc** -
     Enabled by default. Normally enabled through **std**, but can be enabled on it's own for use in
-    `no_std` environments that provide allocation primitives. Enables random generation of secure
+    `no_std` environments which provide allocation primitives. Enables random generation of secure
     `String` values when using [`SecureRng`].
 * **secure** -
-    Enabled by default. Provides [`SecureRng`], which implements [SecureGenerator].
+    Enabled by default. Provides [`SecureRng`], which implements [SecureGenerator]. The backing generator
+    is ChaCha with 8 rounds and a 64-bit counter.
 * **inline** -
     Marks all [`Generator::u64`] implementations with `#[inline]`. Should generally increase
     runtime performance at the cost of binary size and compile time.
@@ -108,7 +109,7 @@ assert!(s.len() == Base16::MIN_LEN);
 
 ## Details
 
-This crate uses the [xoshiro] family for pseudo-random number generators. These generators are
+This crate primarily uses the [xoshiro] family for pseudo-random number generators. These generators are
 very fast, of [very high statistical quality], and small. They aren't cryptographically secure,
 but most users don't need their RNG to be secure, they just need it to be random and fast. The default
 generator is xoshiro256++, which should provide a large enough period for most users. The xoshiro512++
@@ -116,6 +117,14 @@ generator is also provided in case you need a longer period.
 
 [xoshiro]: https://prng.di.unimi.it/
 [very high statistical quality]: https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
+
+Since version 2.0, [`RomuTrio`] and [`RomuQuad`] from the [romurand] family are also provided. These are
+non-linear generators which can be ever-so-slightly faster than the xoshiro generators, particularly when
+the `inline` feature is enabled. But in practice this difference likely won't be measurable. Unless you're
+especially fond of the statistical properties of the romurand generators, this crates default generator
+should be more than enough.
+
+[romurand]: https://romu-random.org/
 
 All generators output a distinct `u64` value on each call, and the various methods used for transforming
 those outputs into more usable forms are all high-quality and well-understood. Placing an upper bound
@@ -164,7 +173,7 @@ this to ChaCha12 if ChaCha8 is ever compromised.
 Generators are seeded using entropy from the underlying OS, and have the potential to fail during creation.
 But in practice this is extraordinarily unlikely, and isn't something the end-user should ever worry about.
 Modern Windows versions (10 and newer) have a crypto subsystem that will never fail during runtime, and
-rustc can trivially remove the failure branch when compiling binaries for those systems.
+rust can trivially remove the failure branch when compiling binaries for those systems.
 */
 
 #![deny(missing_docs)]

@@ -131,7 +131,7 @@ pub trait SecureGenerator: Generator {
         } else {
             // Alternative approach that's potentially much slower,
             // but always produces unbiased results.
-            // The unwrap gets optimized out since rustc can see that
+            // The unwrap gets optimized out since rust can see that
             // `E::CHARSET` has a non-zero length.
             bytes.fill_with(|| *self.choose(E::CHARSET).unwrap());
         }
