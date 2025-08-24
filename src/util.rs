@@ -8,7 +8,7 @@
 pub unsafe fn as_raw_bytes_mut<T>(slice: &mut [T]) -> &mut [u8] {
     unsafe {
         let data = slice.as_mut_ptr().cast();
-        let len = slice.len() * size_of::<T>();
+        let len = size_of_val(slice);
         core::slice::from_raw_parts_mut(data, len)
     }
 }

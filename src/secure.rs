@@ -34,7 +34,7 @@ impl Generator for SecureRng {
     fn try_new() -> Result<Self, getrandom::Error> {
         // We want to randomize **all** bits of the matrix, even the counter.
         // They're all going to be overwritten so no need to initialize them.
-        #[allow(invalid_value)]
+        #[allow(invalid_value, clippy::uninit_assumed_init)]
         let mut state = unsafe { MaybeUninit::<[u8; SEED_LEN_U8]>::uninit().assume_init() };
         getrandom::fill(&mut state)?;
         let mut internal = ChaCha8Djb::from(state);

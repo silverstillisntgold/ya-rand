@@ -563,7 +563,7 @@ pub trait Generator: Sized {
     /// `'A'..='Z'`, `'a'..='z'`, and `'0'..='9'`
     #[inline]
     fn ascii_alphanumeric(&mut self) -> char {
-        *self.choose(&ALPHANUMERIC[..]).unwrap() as char
+        *self.choose(ALPHANUMERIC).unwrap() as char
     }
 
     /// Returns a randomly selected ASCII character from the pool of:

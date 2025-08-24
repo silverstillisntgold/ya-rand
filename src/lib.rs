@@ -176,6 +176,7 @@ Modern Windows versions (10 and newer) have a crypto subsystem that will never f
 rust can trivially remove the failure branch when compiling binaries for those systems.
 */
 
+#![allow(clippy::doc_overindented_list_items)]
 #![deny(missing_docs)]
 #![no_std]
 
@@ -352,7 +353,7 @@ mod tests {
         let mut rng = new_rng();
         for _ in 0..ITERATIONS_LONG {
             let val = rng.f64();
-            assert!(0.0 <= val && val < 1.0);
+            assert!((0.0..1.0).contains(&val));
         }
     }
 
@@ -361,7 +362,7 @@ mod tests {
         let mut rng = new_rng();
         for _ in 0..ITERATIONS_LONG {
             let val = rng.f32();
-            assert!(0.0 <= val && val < 1.0);
+            assert!((0.0..1.0).contains(&val));
         }
     }
 
