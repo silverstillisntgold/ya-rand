@@ -16,6 +16,7 @@ const F32_DIVISOR: f32 = F32_MAX_PRECISE as f32;
 pub const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 /// Trait for RNGs that provide cryptographically secure data.
+#[cfg(feature = "secure")]
 pub trait SecureGenerator: Generator {
     /// Fills `dst` with random data, which is safe to be used in cryptographic contexts.
     ///
@@ -108,7 +109,7 @@ pub trait SecureGenerator: Generator {
     ///     );
     /// }
     /// ```
-    #[cfg(all(feature = "alloc", feature = "secure"))]
+    #[cfg(feature = "alloc")]
     #[inline(never)]
     fn text<E: Encoder>(&mut self, len: usize) -> String {
         const BYTE_VALUES: usize = 1 << u8::BITS;
@@ -610,7 +611,7 @@ pub trait Generator: Sized {
 
     /// Clones `slice` into a new `Vec`, calls [`Generator::shuffle`]
     /// on it, and returns the result.
-    #[cfg(all(feature = "alloc", feature = "secure"))]
+    #[cfg(feature = "alloc")]
     #[inline]
     fn shuffle_cloned<T: Clone>(&mut self, slice: &[T]) -> Vec<T> {
         let mut v = slice.to_vec();

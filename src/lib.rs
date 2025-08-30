@@ -333,6 +333,11 @@ mod tests {
 
         let contains_all_values = E::CHARSET.iter().all(|c| distinct_bytes.contains(c));
         assert!(contains_all_values);
+
+        // Pretty sure this isn't necessary because of the above length
+        // checks but extra testing is fine by me.
+        let all_values_are_ascii = distinct_chars.iter().all(|c| c.is_ascii());
+        assert!(all_values_are_ascii);
     }
 
     #[test]
