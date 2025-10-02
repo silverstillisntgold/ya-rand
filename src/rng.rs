@@ -118,7 +118,7 @@ pub trait SecureGenerator: Generator {
         // will be page-faulted and can massively improve performance
         // when encoding long strings.
         let mut bytes = vec![u8::MAX; len.max(E::MIN_LEN)];
-        if BYTE_VALUES % E::CHARSET.len() == 0 {
+        if BYTE_VALUES.is_multiple_of(E::CHARSET.len()) {
             self.fill_bytes(&mut bytes);
             // Directly map each random u8 to a character in the set.
             // This approach is extremely efficient, but only produces

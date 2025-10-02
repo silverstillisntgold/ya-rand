@@ -194,7 +194,9 @@ mod util;
 mod xoshiro256pp;
 mod xoshiro512pp;
 
-pub use self::rng::{Generator, SecureGenerator, SeedableGenerator};
+#[cfg(feature = "secure")]
+pub use rng::SecureGenerator;
+pub use rng::{Generator, SeedableGenerator};
 pub use romuquad::RomuQuad;
 pub use romutrio::RomuTrio;
 #[cfg(feature = "secure")]
