@@ -1,7 +1,8 @@
 //! Compares the performance of various RNG crates when
 //! filling a large slice with random values.
 
-use chacha20::{ChaCha8Rng, rand_core::RngCore};
+//use chacha20::{ChaCha8Rng, rand_core::RngCore};
+use rand::RngCore;
 use rand::{SeedableRng, rngs::StdRng};
 use rayon::prelude::*;
 use std::hint::black_box;
@@ -29,32 +30,46 @@ fn main() {
         black_box(v);
     });
 
+    // let mut v = vec![1; ITERATIONS];
+    // let mut rng = new_rng();
+    // let sequential_local_yarand = time_in_nanos(move || {
+    //     v.iter_mut().for_each(|v| {
+    //         *v = rng.u64();
+    //     });
+    //     black_box(v);
+    // });
     let mut v = vec![1; ITERATIONS];
-    let mut rng = new_rng();
     let sequential_local_yarand = time_in_nanos(move || {
-        v.iter_mut().for_each(|v| {
+        v.par_iter_mut().for_each_init(new_rng, |rng, v| {
             *v = rng.u64();
         });
         black_box(v);
     });
 
+    // let mut v = vec![1; ITERATIONS];
+    // let mut rng = new_rng_secure();
+    // let sequential_local_yarand_secure = time_in_nanos(move || {
+    //     v.iter_mut().for_each(|v| {
+    //         *v = rng.u64();
+    //     });
+    //     black_box(v);
+    // });
     let mut v = vec![1; ITERATIONS];
-    let mut rng = new_rng_secure();
     let sequential_local_yarand_secure = time_in_nanos(move || {
-        v.iter_mut().for_each(|v| {
+        v.par_iter_mut().for_each_init(new_rng_secure, |rng, v| {
             *v = rng.u64();
         });
         black_box(v);
     });
 
-    let mut v = vec![1; ITERATIONS];
-    let mut rng = SecureChaCha20::new();
-    let sequential_local_chacha20 = time_in_nanos(move || {
-        v.iter_mut().for_each(|v| {
-            *v = rng.u64();
-        });
-        black_box(v);
-    });
+    // let mut v = vec![1; ITERATIONS];
+    // let mut rng = SecureChaCha20::new();
+    // let sequential_local_chacha20 = time_in_nanos(move || {
+    //     v.iter_mut().for_each(|v| {
+    //         *v = rng.u64();
+    //     });
+    //     black_box(v);
+    // });
 
     let mut v = vec![1; ITERATIONS];
     let mut rng = oorandom::Rand64::new(rand::random());
@@ -118,7 +133,7 @@ fn main() {
         sequential_local_fastrand,
         sequential_local_yarand,
         sequential_local_yarand_secure,
-        sequential_local_chacha20,
+        0.0,
         sequential_local_oorand,
         sequential_tls_rand,
         sequential_tls_fastrand,
@@ -160,22 +175,22 @@ impl Generator for SecureStdRng {
     }
 }
 
-/// Same rationale as `SecureStdRng`.
-struct SecureChaCha20 {
-    internal: ChaCha8Rng,
-}
+// Same rationale as `SecureStdRng`.
+// struct SecureChaCha20 {
+//     internal: ChaCha8Rng,
+// }
 
-impl Generator for SecureChaCha20 {
-    fn try_new() -> Result<Self, getrandom::Error> {
-        let mut data = <ChaCha8Rng as SeedableRng>::Seed::default();
-        getrandom::fill(&mut data)?;
-        let internal = ChaCha8Rng::from_seed(data);
-        Ok(Self { internal })
-    }
+// impl Generator for SecureChaCha20 {
+//     fn try_new() -> Result<Self, getrandom::Error> {
+//         let mut data = <ChaCha8Rng as SeedableRng>::Seed::default();
+//         getrandom::fill(&mut data)?;
+//         let internal = ChaCha8Rng::from_seed(data);
+//         Ok(Self { internal })
+//     }
 
-    #[cfg_attr(not(feature = "inline"), inline(never))]
-    #[cfg_attr(feature = "inline", inline(always))]
-    fn u64(&mut self) -> u64 {
-        self.internal.next_u64()
-    }
-}
+//     #[cfg_attr(not(feature = "inline"), inline(never))]
+//     #[cfg_attr(feature = "inline", inline(always))]
+//     fn u64(&mut self) -> u64 {
+//         self.internal.next_u64()
+//     }
+// }

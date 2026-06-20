@@ -182,6 +182,7 @@ rust can trivially remove the failure branch when compiling binaries for those s
 
 #[cfg(all(feature = "alloc", feature = "secure"))]
 extern crate alloc;
+extern crate std;
 
 #[cfg(all(feature = "alloc", feature = "secure"))]
 pub mod encoding;
