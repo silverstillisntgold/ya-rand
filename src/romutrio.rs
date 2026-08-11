@@ -21,14 +21,11 @@ impl Default for RomuTrio {
 impl SeedableGenerator for RomuTrio {
     fn new_with_seed(seed: u64) -> Self {
         let state = util::state_from_seed(seed);
-        let mut ret = Self { state };
-        let _discard_first = ret.u64();
-        ret
+        Self { state }
     }
 }
 
 impl Generator for RomuTrio {
-    #[inline]
     fn try_new() -> Result<Self, getrandom::Error> {
         let state = util::state_from_entropy()?;
         Ok(Self { state })

@@ -9,13 +9,6 @@ union Buffer {
     u64: [u64; BATCH_BYTES / size_of::<u64>()],
 }
 
-impl Default for Buffer {
-    #[inline]
-    fn default() -> Self {
-        Self { u8: [0; _] }
-    }
-}
-
 /// A cryptographically secure random number generator.
 ///
 /// The current implementation uses ChaCha with 10 rounds and a 64-bit counter.
@@ -43,12 +36,11 @@ impl SecureGenerator for SecureRng {
 }
 
 impl Generator for SecureRng {
-    #[inline(never)]
     fn try_new() -> Result<Self, getrandom::Error> {
         // We want to randomize **all** bits of the matrix, even the counter.
         let mut state = [0; _];
         getrandom::fill(&mut state)?;
-        let mut buffer = Buffer::default();
+        let mut buffer = Buffer { u8: [0; _] };
         let mut rng = ChaCha::from_bytes(state);
         unsafe {
             rng.fill_exact(&mut buffer.u8);

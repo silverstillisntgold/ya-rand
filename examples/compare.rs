@@ -188,7 +188,7 @@ impl Generator for SecureStdRng {
     }
 
     #[cfg_attr(not(feature = "inline"), inline(never))]
-    #[cfg_attr(feature = "inline", inline(always))]
+    #[cfg_attr(feature = "inline", inline)]
     fn u64(&mut self) -> u64 {
         self.internal.next_u64()
     }
@@ -208,7 +208,7 @@ impl Generator for SecureChaCha20 {
     }
 
     #[cfg_attr(not(feature = "inline"), inline(never))]
-    #[cfg_attr(feature = "inline", inline(always))]
+    #[cfg_attr(feature = "inline", inline)]
     fn u64(&mut self) -> u64 {
         self.internal.next_u64()
     }

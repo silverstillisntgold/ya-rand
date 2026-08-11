@@ -21,14 +21,11 @@ impl Default for Xoshiro256pp {
 impl SeedableGenerator for Xoshiro256pp {
     fn new_with_seed(seed: u64) -> Self {
         let state = util::state_from_seed(seed);
-        let mut ret = Self { state };
-        let _discard_first = ret.u64();
-        ret
+        Self { state }
     }
 }
 
 impl Generator for Xoshiro256pp {
-    #[inline]
     fn try_new() -> Result<Self, getrandom::Error> {
         let state = util::state_from_entropy()?;
         Ok(Self { state })

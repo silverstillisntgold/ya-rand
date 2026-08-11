@@ -21,14 +21,11 @@ impl Default for RomuQuad {
 impl SeedableGenerator for RomuQuad {
     fn new_with_seed(seed: u64) -> Self {
         let state = util::state_from_seed(seed);
-        let mut ret = Self { state };
-        let _discard_first = ret.u64();
-        ret
+        Self { state }
     }
 }
 
 impl Generator for RomuQuad {
-    #[inline]
     fn try_new() -> Result<Self, getrandom::Error> {
         let state = util::state_from_entropy()?;
         Ok(Self { state })

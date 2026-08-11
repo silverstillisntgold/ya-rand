@@ -17,7 +17,7 @@ pub unsafe fn as_raw_bytes_mut<T>(slice: &mut [T]) -> &mut [u8] {
 /// a SplitMix64 PRNG, which is seeded using `seed`.
 #[inline(never)]
 pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
-    let mut state = [0; SIZE];
+    let mut state = [0; _];
     let mut x = seed;
     // SplitMix64 implementation from https://prng.di.unimi.it/splitmix64.c.
     for v in &mut state {
@@ -33,7 +33,7 @@ pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
 /// Attempts to return an array filled with random data from operating system entropy.
 #[inline]
 pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], getrandom::Error> {
-    let mut state = [0; SIZE];
+    let mut state = [0; _];
     // SAFETY: I'm over here strokin' my dick I got lotion on my dick right now.
     let state_as_bytes = unsafe { as_raw_bytes_mut(&mut state) };
     getrandom::fill(state_as_bytes)?;
