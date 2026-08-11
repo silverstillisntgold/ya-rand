@@ -10,7 +10,7 @@ const ITERATIONS: u64 = 1 << 24;
 fn main() {
     let mut rng = new_rng();
     for i in 0..3 {
-        println!("Run #{}:", i + 1);
+        println!("Run #{}", i + 1);
         test_f32(&mut rng);
         test_f64(&mut rng);
         println!();

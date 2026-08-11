@@ -15,6 +15,7 @@ fn main() {
     let p = black_box(0.5);
     let mut basic_time = Vec::with_capacity(420);
     let mut advanced_time = Vec::with_capacity(420);
+
     for i in 16..=32 {
         let mut basic = Basic::new(i, p);
         let mut advanced = Advanced::new(i);
@@ -30,7 +31,7 @@ fn main() {
         advanced_time.push(delta);
 
         println!(
-            "total: {} || basic_avg: {:.4} || advanced_avg: {:.4} || delta: {:.5}",
+            "total: {} || basic_avg: {:.3} || advanced_avg: {:.3} || delta: {:.4}",
             i,
             basic_avg,
             advanced_avg,
@@ -40,9 +41,10 @@ fn main() {
 
     let result_basic = basic_time.iter().sum::<f64>() / (basic_time.len() as f64);
     let result_advanced = advanced_time.iter().sum::<f64>() / (advanced_time.len() as f64);
-    println!("basic time: {:.4} seconds", result_basic);
+    let speedup = result_basic / result_advanced;
+    println!("basic time:    {:.4} seconds", result_basic);
     println!("advanced time: {:.4} seconds", result_advanced);
-    println!("speedup: {:.2}", result_basic / result_advanced);
+    println!("speedup:       {:.2} seconds", speedup);
     println!();
 }
 
@@ -64,6 +66,7 @@ trait LevelGenerator {
 
 struct Basic {
     total: usize,
+    total_inclusive: i32,
     p: f64,
     rng: ShiroRng,
 }
@@ -71,9 +74,11 @@ struct Basic {
 impl Basic {
     fn new(total: usize, p: f64) -> Self {
         assert!(total != 0);
-        assert!(p > 0.0 && p < 1.0);
+        assert!(p > 0.0);
+        assert!(p < 1.0);
         Self {
             total,
+            total_inclusive: total.try_into().unwrap(),
             p,
             rng: ShiroRng::new(),
         }
@@ -82,14 +87,36 @@ impl Basic {
 
 impl LevelGenerator for Basic {
     fn random(&mut self) -> usize {
-        let mut h = 0;
-        let mut x = self.p;
-        let f = self.rng.f64_nonzero();
-        while x > f && h + 1 < self.total {
-            h += 1;
-            x *= self.p;
-        }
-        h
+        // Invert the CDF of the truncated geometric distribution:
+        //
+        //   CDF(n) = (q^n - 1) / (q^t - 1)
+        //
+        // where t is the _exclusive_ upper bound (i.e., total + 1).
+        //
+        // Solving for n given a uniform variate u in [0, 1]:
+        //
+        //   n = floor( log_q( 1 + (q^t - 1) * u ) )
+        //
+        // where q = 1 - p and t is the total number of levels.
+        let u = self.rng.f64();
+        ((1.0 + (self.p.powi(self.total_inclusive) - 1.0) * u)
+            .log(self.p)
+            .floor() as usize)
+            // When q^total underflows to 0.0 due to floating-point precision,
+            // the formula can produce values > total.  This ensures that we
+            // never return a level greater than total.
+            .min(self.total)
+
+        // Old example.
+        //
+        // let mut h = 0;
+        // let mut x = self.p;
+        // let f = self.rng.f64_nonzero();
+        // while x > f && h + 1 < self.total {
+        //     h += 1;
+        //     x *= self.p;
+        // }
+        // h
     }
 }
 
@@ -101,6 +128,7 @@ struct Advanced {
 impl Advanced {
     fn new(total: usize) -> Self {
         assert!(total != 0);
+        assert!(total <= 64);
         Self {
             total,
             rng: ShiroRng::new(),
