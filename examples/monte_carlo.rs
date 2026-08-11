@@ -9,7 +9,8 @@ const ITERATIONS: u64 = 1 << 24;
 
 fn main() {
     let mut rng = new_rng();
-    for _ in 0..3 {
+    for i in 0..3 {
+        println!("Run #{}:", i + 1);
         test_f32(&mut rng);
         test_f64(&mut rng);
         println!();
@@ -27,7 +28,7 @@ fn test_f32(rng: &mut ShiroRng) {
         }
     }
 
-    let simulated = 4.0 * (in_circle as f32) / (ITERATIONS as f32);
+    let simulated = 4.0 / (ITERATIONS as f32) * (in_circle as f32);
     println!("f32 const: {}", f32_PI);
     println!("Simulated: {}", simulated);
     println!(
@@ -47,7 +48,7 @@ fn test_f64(rng: &mut ShiroRng) {
         }
     }
 
-    let simulated = 4.0 * (in_circle as f64) / (ITERATIONS as f64);
+    let simulated = 4.0 / (ITERATIONS as f64) * (in_circle as f64);
     println!("f64 const: {}", f64_PI);
     println!("Simulated: {}", simulated);
     println!(

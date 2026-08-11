@@ -21,11 +21,13 @@ fn main() {
 
         let start = Instant::now();
         let basic_avg = avg(|| basic.random());
-        basic_time.push(Instant::now().duration_since(start).as_secs_f64());
+        let delta = start.elapsed().as_secs_f64();
+        basic_time.push(delta);
 
         let start = Instant::now();
         let advanced_avg = avg(|| advanced.random());
-        advanced_time.push(Instant::now().duration_since(start).as_secs_f64());
+        let delta = start.elapsed().as_secs_f64();
+        advanced_time.push(delta);
 
         println!(
             "total: {} || basic_avg: {:.4} || advanced_avg: {:.4} || delta: {:.5}",
