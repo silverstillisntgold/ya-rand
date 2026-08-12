@@ -1,10 +1,12 @@
 use crate::util;
 use core::ptr;
 
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 #[cfg(all(feature = "alloc", feature = "secure"))]
 use {
     crate::encoding::Encoder,
-    alloc::{string::String, vec, vec::Vec},
+    alloc::{string::String, vec},
 };
 
 const F64_MANT: u32 = f64::MANTISSA_DIGITS;
@@ -527,17 +529,9 @@ pub trait Generator: Sized {
         C::IntoIter: ExactSizeIterator,
     {
         let mut iter = collection.into_iter();
-        let len = iter.len();
-        if len == 0 {
-            // What kind of goofy-ass clown tries to choose
-            // an item from an empty collection?
-            core::hint::cold_path();
-            return None;
-        }
-        let idx = self.bound(len as u64) as usize;
-        // SAFETY: Since `bound` always returns a value less than
-        // it's input, `nth` will never return `None`.
-        Some(unsafe { iter.nth(idx).unwrap_unchecked() })
+        let max = iter.len();
+        let n = self.bound(max as u64) as usize;
+        iter.nth(n)
     }
 
     /// Returns a randomly selected ASCII character from the pool of:
