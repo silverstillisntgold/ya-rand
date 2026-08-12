@@ -9,6 +9,23 @@ union Buffer {
     u64: [u64; BATCH_BYTES / size_of::<u64>()],
 }
 
+impl Buffer {
+    #[inline]
+    fn u64_get(&self, index: usize) -> u64 {
+        unsafe { self.u64[index] }
+    }
+
+    #[inline]
+    fn u64_len(&self) -> usize {
+        unsafe { self.u64.len() }
+    }
+
+    #[inline]
+    fn u8_mut(&mut self) -> &mut [u8; BATCH_BYTES] {
+        unsafe { &mut self.u8 }
+    }
+}
+
 /// A cryptographically secure random number generator.
 ///
 /// The current implementation uses ChaCha with 10 rounds and a 64-bit counter.
@@ -29,8 +46,8 @@ impl fmt::Debug for SecureRng {
 impl SecureGenerator for SecureRng {
     #[inline]
     fn fill_bytes(&mut self, dst: &mut [u8]) {
-        // The `chachacha` crate provides a thoroughly tested and
-        // extremely fast fill implementation.
+        // The `chachacha` crate provides a thoroughly tested
+        // and extremely fast fill implementation.
         self.rng.fill(dst);
     }
 }
@@ -42,29 +59,25 @@ impl Generator for SecureRng {
         getrandom::fill(&mut state)?;
         let mut buffer = Buffer { u8: [0; _] };
         let mut rng = ChaCha::from_bytes(state);
-        unsafe {
-            rng.fill_exact(&mut buffer.u8);
-        }
+        rng.fill_exact(buffer.u8_mut());
         let index = 0;
         Ok(Self { buffer, rng, index })
     }
 
     #[cfg_attr(feature = "inline", inline)]
     fn u64(&mut self) -> u64 {
-        unsafe {
-            if self.index >= self.buffer.u64.len() {
-                // This branch only occurs when `self.buffer.u64` has
-                // been exhausted: once every 32 calls.
-                core::hint::cold_path();
-                self.rng.fill_exact(&mut self.buffer.u8);
-                // Needs to be zeroed **after** `self.buffer.u8` is filled.
-                self.index = 0;
-            }
-            // Control flow of the above if-statement ensures
-            // this bounds check is optimized out.
-            let ret = self.buffer.u64[self.index];
-            self.index += 1;
-            ret
+        if self.index >= self.buffer.u64_len() {
+            // This branch only occurs when `self.buffer` has
+            // been exhausted: once after every 32 calls.
+            core::hint::cold_path();
+            self.rng.fill_exact(self.buffer.u8_mut());
+            // Needs to be zeroed **after** `self.buffer` is filled.
+            self.index = 0;
         }
+        // Control flow of the above if-statement should ensure
+        // that this bounds check is optimized out.
+        let ret = self.buffer.u64_get(self.index);
+        self.index += 1;
+        ret
     }
 }
