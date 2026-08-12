@@ -91,18 +91,18 @@ assert!(s.len() == Base16::MIN_LEN);
 
 ## Features
 
-* **std** -
-    Enabled by default, but can be disabled for use in `no_std` environments. Enables normal/exponential
-    distributions, error type conversions for getrandom, and the **alloc** feature.
-* **alloc** -
-    Enabled by default. Normally enabled through **std**, but can be enabled on it's own for use in
+* **std**
+* - Enabled by default, but can be disabled for use in `no_std` environments. Enables normal/exponential
+*   distributions, error type conversions for getrandom, and the **alloc** feature.
+* **alloc**
+* - Enabled by default. Normally enabled through **std**, but can be enabled on it's own for use in
     `no_std` environments which provide allocation primitives. Enables random generation of secure
     `String` values when using [`SecureRng`].
-* **secure** -
-    Enabled by default. Provides [`SecureRng`], which implements [SecureGenerator]. The backing generator
+* **secure**
+* - Enabled by default. Provides [`SecureRng`], which implements [SecureGenerator]. The backing generator
     is ChaCha with 8 rounds and a 64-bit counter.
-* **inline** -
-    Marks all [`Generator::u64`] implementations with `#[inline]`. Should generally increase
+* **inline**
+* - Marks all [`Generator::u64`] implementations with `#[inline]`. Should generally increase
     runtime performance at the cost of binary size and compile time.
     You'll have to test your specific use case to determine if this feature is worth it for you;
     all the RNGs provided tend to be plenty fast without additional inlining.
@@ -172,11 +172,9 @@ this to ChaCha12 if ChaCha8 is ever compromised.
 
 Generators are seeded using entropy from the underlying OS, and have the potential to fail during creation.
 But in practice this is extraordinarily unlikely, and isn't something the end-user should ever worry about.
-Modern Windows versions (10 and newer) have a crypto subsystem that will never fail during runtime, and
-rust can trivially remove the failure branch when compiling binaries for those systems.
+For example: Modern Windows versions (10 and newer) have a crypto subsystem that will never fail.
 */
 
-#![allow(clippy::doc_overindented_list_items)]
 #![deny(missing_docs)]
 #![no_std]
 
@@ -185,28 +183,28 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
+#[cfg(feature = "secure")]
+pub use {rng::SecureGenerator, secure::SecureRng};
+
+pub use rng::{Generator, SeedableGenerator};
+pub use romuquad::RomuQuad;
+pub use romutrio::RomuTrio;
+pub use xoshiro256pp::Xoshiro256pp;
+pub use xoshiro512pp::Xoshiro512pp;
+
 #[cfg(all(feature = "alloc", feature = "secure"))]
 pub mod encoding;
+#[cfg(feature = "secure")]
+mod secure;
+
 mod rng;
 mod romuquad;
 mod romutrio;
-#[cfg(feature = "secure")]
-mod secure;
 mod util;
 mod xoshiro256pp;
 mod xoshiro512pp;
 
-#[cfg(feature = "secure")]
-pub use rng::SecureGenerator;
-pub use rng::{Generator, SeedableGenerator};
-pub use romuquad::RomuQuad;
-pub use romutrio::RomuTrio;
-#[cfg(feature = "secure")]
-pub use secure::SecureRng;
-pub use xoshiro256pp::Xoshiro256pp;
-pub use xoshiro512pp::Xoshiro512pp;
-
-/// The recommended generator for all non-cryptographic purposes.
+/// The recommended random number generator for all non-cryptographic purposes.
 pub type ShiroRng = Xoshiro256pp;
 
 /// The recommended way to create new PRNG instances.
@@ -220,8 +218,8 @@ pub fn new_rng() -> ShiroRng {
 /// The recommended way to create new CRNG instances.
 ///
 /// Identical to calling [`SecureRng::new`].
-#[cfg(feature = "secure")]
 #[inline]
+#[cfg(feature = "secure")]
 pub fn new_rng_secure() -> SecureRng {
     SecureRng::new()
 }
