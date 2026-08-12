@@ -35,7 +35,8 @@ pub trait SecureGenerator: Generator {
     /// Fills `dst` with random data, which is safe to be used in cryptographic contexts.
     ///
     /// Differs from [`SecureGenerator::fill_bytes`] in that the underlying type of `dst`
-    /// doesn't need to be a specific type (see safety comment).
+    /// doesn't need to be any specific type, but there are constraints on what kind of type
+    /// is safe to use (see safety comment).
     ///
     /// # Examples
     ///
