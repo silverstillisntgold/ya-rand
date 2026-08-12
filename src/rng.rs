@@ -126,9 +126,11 @@ pub trait SecureGenerator: Generator {
             // unbiased random sequences when the length of the current
             // `CHARSET` is divisible by the amount of possible u8 values,
             // which is why we need a fallback approach.
-            for cur in &mut bytes {
-                let random_index = *cur as usize;
-                *cur = E::CHARSET[random_index % E::CHARSET.len()];
+            for byte in &mut bytes {
+                let random_index = *byte as usize;
+                // If we're in this branch then the charset's length is a
+                // power of two and this div should be optimized out.
+                *byte = E::CHARSET[random_index % E::CHARSET.len()];
             }
         } else {
             // Alternative approach that's potentially much slower,
@@ -308,17 +310,12 @@ pub trait Generator: Sized {
     fn bound(&mut self, max: u64) -> u64 {
         // Lemire's nearly divisionless method: https://arxiv.org/abs/1805.10941.
         let (mut high, mut low) = util::wide_mul(self.u64(), max);
-        match low < max {
-            false => {
-                // TODO: Use the `unlikely` hint when it get stabilized
-                // to indicate this branch is unlikely.
-            }
-            true => {
-                // The dreaded division.
-                let threshold = max.wrapping_neg() % max;
-                while low < threshold {
-                    (high, low) = util::wide_mul(self.u64(), max);
-                }
+        if low < max {
+            core::hint::cold_path();
+            // The dreaded division.
+            let threshold = max.wrapping_neg() % max;
+            while low < threshold {
+                (high, low) = util::wide_mul(self.u64(), max);
             }
         }
         debug_assert!(
@@ -354,6 +351,8 @@ pub trait Generator: Sized {
     /// It is expected that `min` < `max`.
     #[inline]
     fn range(&mut self, min: i64, max: i64) -> i64 {
+        // We've documented the expected relationship between `min` and `max`,
+        // but we want to tolerate the user doing stupid shit with them.
         let delta = max.abs_diff(min);
         (self.bound(delta) as i64) + min
     }
@@ -405,9 +404,11 @@ pub trait Generator: Sized {
             // Start with an interval of [0, 2^54)
             x = self.bits(BITS) as i64;
             // Interval is now (0, 2^54)
-            if x != 0 {
-                break;
+            if x == 0 {
+                core::hint::cold_path();
+                continue;
             }
+            break;
         }
         // Shift interval to (-2^53, 2^53)
         x -= OFFSET;
@@ -425,9 +426,11 @@ pub trait Generator: Sized {
             // Start with an interval of [0, 2^25)
             x = self.bits(BITS) as i64;
             // Interval is now (0, 2^25)
-            if x != 0 {
-                break;
+            if x == 0 {
+                core::hint::cold_path();
+                continue;
             }
+            break;
         }
         // Shift interval to (-2^24, 2^24)
         x -= OFFSET;
@@ -461,8 +464,8 @@ pub trait Generator: Sized {
     /// user-defined `mean` and `stddev`.
     ///
     /// It is expected that `stddev.abs()` != `0.0`.
-    #[cfg(feature = "std")]
     #[inline]
+    #[cfg(feature = "std")]
     fn f64_normal_distribution(&mut self, mean: f64, stddev: f64) -> (f64, f64) {
         let (x, y) = self.f64_normal();
         let x_adjusted = x.mul_add(stddev, mean);
@@ -471,10 +474,10 @@ pub trait Generator: Sized {
     }
 
     /// Returns an exponentially distributed `f64` with a `lambda` of `1.0`.
-    #[cfg(feature = "std")]
     #[inline]
+    #[cfg(feature = "std")]
     fn f64_exponential(&mut self) -> f64 {
-        // Using abs() instead of negating the result of ln() to
+        // Using `abs` instead of negating the result of `ln` to
         // eliminate the possibility of ever returning -0.0.
         self.f64_nonzero().ln().abs()
     }
@@ -482,8 +485,8 @@ pub trait Generator: Sized {
     /// Returns an exponentially distributed `f64` with user-defined `lambda`.
     ///
     /// It is expected that `lambda.abs()` != `0.0`.
-    #[cfg(feature = "std")]
     #[inline]
+    #[cfg(feature = "std")]
     fn f64_exponential_lambda(&mut self, lambda: f64) -> f64 {
         self.f64_exponential() / lambda
     }
@@ -525,15 +528,16 @@ pub trait Generator: Sized {
     {
         let mut iter = collection.into_iter();
         let len = iter.len();
-        match len != 0 {
-            true => Some({
-                let idx = self.bound(len as u64) as usize;
-                // SAFETY: Since `bound` always returns a value less than
-                // it's input, `nth` will never return `None`.
-                unsafe { iter.nth(idx).unwrap_unchecked() }
-            }),
-            false => None,
+        if len == 0 {
+            // What kind of goofy-ass clown tries to choose
+            // an item from an empty collection?
+            core::hint::cold_path();
+            return None;
         }
+        let idx = self.bound(len as u64) as usize;
+        // SAFETY: Since `bound` always returns a value less than
+        // it's input, `nth` will never return `None`.
+        Some(unsafe { iter.nth(idx).unwrap_unchecked() })
     }
 
     /// Returns a randomly selected ASCII character from the pool of:
@@ -612,8 +616,8 @@ pub trait Generator: Sized {
 
     /// Clones `slice` into a new `Vec`, calls [`Generator::shuffle`]
     /// on it, and returns the result.
-    #[cfg(feature = "alloc")]
     #[inline]
+    #[cfg(feature = "alloc")]
     fn shuffle_cloned<T: Clone>(&mut self, slice: &[T]) -> Vec<T> {
         let mut v = slice.to_vec();
         self.shuffle(&mut v);
