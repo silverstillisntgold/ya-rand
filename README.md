@@ -7,15 +7,38 @@ Simple and fast pseudo/crypto random number generation.
 The backing CRNG uses compile-time dispatch, so you'll only get the fastest implementation available to the
 machine if rust knows what kind of machine to compile for.
 
-Your best bet is to configure your global .cargo/config.toml with `rustflags = ["-C", "target-cpu=native"]`
-beneath the `[build]` directive.
+Your best bet is to configure your global .cargo/config.toml with `rustflags = ["-Ctarget-cpu=native"]`
+beneath the `[target.<your target triple here>]` directive.
 
 If you know the [x86 feature level] of the processor that will be executing your binaries,
 it maybe be better to instead configure this directive at the crate level.
 
 [x86 feature level]: https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
 
+## But why?
+
+Because [`rand`] is very cool and extremely powerful, but kind of an enormous fucking pain in the ass
+to use, and it's far too large and involved for someone who just needs to flip a coin once every few
+loop iterations. But if you're doing some crazy black magic numerical sorcery, it almost certainly
+has something you can use to complete your spell. Don't be afraid to go there if you need to.
+
+Other crates, like [`fastrand`], [`tinyrand`], or [`oorandom`], fall somewhere between "I'm not sure I trust
+the backing RNG" (state size is too small or algorithm is iffy) and "this API is literally just
+`rand` but far less powerful". I wanted something easy to use, but also fast and statistically robust.
+
+So here we are.
+
+[`fastrand`]: https://crates.io/crates/fastrand
+[`oorandom`]: https://crates.io/crates/oorandom
+[`rand`]: https://crates.io/crates/rand
+[`tinyrand`]: https://crates.io/crates/tinyrand
+
 ## Usage
+
+"How do I access the thread-local RNG?" There isn't one, and unless Rust improves the performance and
+ergonomics of the TLS implementation, there probably won't ever be. Create a local instance when and
+where you need one and use it while you need it. If you need an RNG to stick around for a while, passing
+it between functions or storing it in structs is a perfectly valid solution.
 
 Here are a few examples to get you started, see https://docs.rs/ya-rand for full documentation and more examples.
 

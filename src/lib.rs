@@ -18,16 +18,21 @@ it maybe be better to instead configure this directive at the crate level.
 
 ## But why?
 
-Because `rand` is very cool and extremely powerful, but kind of an enormous fucking pain in the ass
-to use, and it's far too large and involved for someone who just needs to flip a coin once
-every few minutes. But if you're doing some crazy black magic numerical sorcery, it almost certainly
+Because [`rand`] is very cool and extremely powerful, but kind of an enormous fucking pain in the ass
+to use, and it's far too large and involved for someone who just needs to flip a coin once every few
+loop iterations. But if you're doing some crazy black magic numerical sorcery, it almost certainly
 has something you can use to complete your spell. Don't be afraid to go there if you need to.
 
-Other crates, like `fastrand`, `tinyrand`, or `oorandom`, fall somewhere between "I'm not sure I trust
+Other crates, like [`fastrand`], [`tinyrand`], or [`oorandom`], fall somewhere between "I'm not sure I trust
 the backing RNG" (state size is too small or algorithm is iffy) and "this API is literally just
 `rand` but far less powerful". I wanted something easy to use, but also fast and statistically robust.
 
 So here we are.
+
+[`fastrand`]: https://crates.io/crates/fastrand
+[`oorandom`]: https://crates.io/crates/oorandom
+[`rand`]: https://crates.io/crates/rand
+[`tinyrand`]: https://crates.io/crates/tinyrand
 
 ## Usage
 
@@ -91,21 +96,17 @@ assert!(s.len() == Base16::MIN_LEN);
 
 ## Features
 
-* **std**
-* - Enabled by default, but can be disabled for use in `no_std` environments. Enables normal/exponential
-*   distributions, error type conversions for getrandom, and the **alloc** feature.
-* **alloc**
-* - Enabled by default. Normally enabled through **std**, but can be enabled on it's own for use in
-    `no_std` environments which provide allocation primitives. Enables random generation of secure
-    `String` values when using [`SecureRng`].
-* **secure**
-* - Enabled by default. Provides [`SecureRng`], which implements [SecureGenerator]. The backing generator
-    is ChaCha with 8 rounds and a 64-bit counter.
-* **inline**
-* - Marks all [`Generator::u64`] implementations with `#[inline]`. Should generally increase
-    runtime performance at the cost of binary size and compile time.
-    You'll have to test your specific use case to determine if this feature is worth it for you;
-    all the RNGs provided tend to be plenty fast without additional inlining.
+- **std**: Enabled by default, but can be disabled for use in `no_std` environments. Enables normal/exponential
+  distributions, error type conversions for getrandom, and the **alloc** feature.
+- **alloc**: Enabled by default. Normally enabled through **std**, but can be enabled on it's own for use in
+  `no_std` environments which provide allocation primitives. Enables random generation of secure
+  `String` values when using [`SecureRng`]. Does nothing without the **secure** feature.
+- **secure**: Enabled by default. Provides [`SecureRng`], which implements [SecureGenerator]. The backing generator
+  is ChaCha with 10 rounds and a 64-bit counter.
+- **inline**: Marks all [`Generator::u64`] implementations with `#[inline]`. Should generally increase
+  runtime performance at the cost of binary size and compile time.
+  You'll have to test your specific use case to determine if this feature is worth it for you;
+  all the RNGs provided tend to be plenty fast without additional inlining.
 
 ## Details
 
@@ -113,7 +114,7 @@ This crate primarily uses the [xoshiro] family for pseudo-random number generato
 very fast, of [very high statistical quality], and small. They aren't cryptographically secure,
 but most users don't need their RNG to be secure, they just need it to be random and fast. The default
 generator is xoshiro256++, which should provide a large enough period for most users. The xoshiro512++
-generator is also provided in case you need a longer period.
+generator is also provided in case you need a longer period (or you like larger numbers).
 
 [xoshiro]: https://prng.di.unimi.it/
 [very high statistical quality]: https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
@@ -127,7 +128,7 @@ should be more than enough.
 [romurand]: https://romu-random.org/
 
 All generators output a distinct `u64` value on each call, and the various methods used for transforming
-those outputs into more usable forms are all high-quality and well-understood. Placing an upper bound
+those outputs into more usable forms are all high-quality and well-documented. Placing an upper bound
 on these values uses [Lemire's method]. Both inclusive bounding and range-based bounding are applications
 of this method, with a few intermediary steps to adjust the bound and apply shifts as needed.
 This approach is unbiased and quite fast, but for very large bounds performance might degrade slightly,
@@ -153,18 +154,17 @@ Exponential variates are generated using [this approach].
 ## Security
 
 If you're in the market for secure random number generation, this crate provides a secure generator backed
-by a highly optimized ChaCha8 implementation from the [`chachacha`] crate.
+by a highly optimized ChaCha10 implementation from the [`chachacha`] crate.
 It functions identically to the other provided RNGs, but with added functionality that wouldn't be safe to
-use on pseudo RNGs. Why only 8 rounds? Because people who are very passionate about cryptography are convinced
-that's enough, and I have zero reason to doubt them, nor any capacity to prove them wrong.
-See page 14 of the [`Too Much Crypto`] paper if you're interested in the justification.
+use on pseudo RNGs. 10 rounds? Wtf? Yes, 10 rounds. 8 is technically completely fine (read the [`Too Much Crypto`]
+paper if you don't believe me), but many would argue that 12 is the only reasonable choice. These people are just
+being pedantic for the sake of, but I've opted to use 10 rounds as a reasonable middle ground.
 
 The security guarantees made to the user are identical to those made by ChaCha as an algorithm. It is up
 to you to determine if those guarantees meet the demands of your use case.
 
 I reserve the right to change the backing implementation at any time to another RNG which is at least as secure,
-without changing the API or bumping the major/minor version. Realistically, this just means I'm willing to bump
-this to ChaCha12 if ChaCha8 is ever compromised.
+without changing the API or bumping the major/minor version number.
 
 [`Too Much Crypto`]: https://eprint.iacr.org/2019/1492
 
@@ -172,7 +172,7 @@ this to ChaCha12 if ChaCha8 is ever compromised.
 
 Generators are seeded using entropy from the underlying OS, and have the potential to fail during creation.
 But in practice this is extraordinarily unlikely, and isn't something the end-user should ever worry about.
-For example: Modern Windows versions (10 and newer) have a crypto subsystem that will never fail.
+As an example, modern Windows versions (10 and newer) have a crypto subsystem that will never fail.
 */
 
 #![deny(missing_docs)]
