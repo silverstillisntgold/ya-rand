@@ -1,11 +1,9 @@
 /*!
-Provides the [`Encoder`] trait, as well as concrete implementations of the
-[RFC 4648] encodings and alphanumeric encoding.
+Provides the [`Encoder`] trait, as well as concrete implementations
+of the [RFC 4648] encodings and alphanumeric encoding.
 
 [RFC 4648]: https://datatracker.ietf.org/doc/html/rfc4648
 */
-
-use crate::rng::ALPHANUMERIC;
 
 /// Specifies parameters for encoding random data into a valid UTF-8 `String`.
 ///
@@ -29,8 +27,7 @@ pub unsafe trait Encoder {
     /// See trait-level docs for safety comments.
     const CHARSET: &[u8];
 
-    /// Shortest length `String` that will contain at least 128 bits
-    /// of randomness.
+    /// Shortest length `String` that will contain at least 128 bits of randomness.
     ///
     /// See trait-level docs for safety comments.
     const MIN_LEN: usize;
@@ -59,7 +56,7 @@ unsafe impl Encoder for Base64Url {
 /// Minimum secure length is 22.
 pub struct Base62;
 unsafe impl Encoder for Base62 {
-    const CHARSET: &[u8] = ALPHANUMERIC;
+    const CHARSET: &[u8] = crate::rng::ALPHANUMERIC;
     const MIN_LEN: usize = 22;
 }
 
