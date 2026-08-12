@@ -5,7 +5,7 @@
 ///
 /// `T` must be valid as nothing more than a collection of bytes.
 #[inline]
-pub unsafe fn as_raw_bytes_mut<T>(slice: &mut [T]) -> &mut [u8] {
+pub unsafe fn as_bytes_mut<T>(slice: &mut [T]) -> &mut [u8] {
     unsafe {
         let data = slice.as_mut_ptr().cast();
         let len = size_of_val(slice);
@@ -13,9 +13,9 @@ pub unsafe fn as_raw_bytes_mut<T>(slice: &mut [T]) -> &mut [u8] {
     }
 }
 
-/// Returns an array filled with pseudorandom data from the output of
-/// a SplitMix64 PRNG, which is seeded using `seed`.
-#[inline(never)]
+/// Returns an array filled with pseudorandom data from the output
+/// of a SplitMix64 PRNG, which is seeded using `seed`.
+#[inline]
 pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
     let mut state = [0; _];
     let mut x = seed;
@@ -35,13 +35,13 @@ pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
 pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], getrandom::Error> {
     let mut state = [0; _];
     // SAFETY: I'm over here strokin' my dick I got lotion on my dick right now.
-    let state_as_bytes = unsafe { as_raw_bytes_mut(&mut state) };
+    let state_as_bytes = unsafe { as_bytes_mut(&mut state) };
     getrandom::fill(state_as_bytes)?;
     Ok(state)
 }
 
-/// Performs 128-bit multiplication on `x` and `y`, returning the
-/// result as a tuple of `u64` values in the format (high, low).
+/// Performs unsigned 128-bit multiplication on `x` and `y`, returning
+/// the result as a tuple of `u64` values in the format (high, low).
 #[inline]
 pub fn wide_mul(x: u64, y: u64) -> (u64, u64) {
     let product = (x as u128).wrapping_mul(y as u128);

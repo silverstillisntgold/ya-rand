@@ -67,7 +67,7 @@ pub trait SecureGenerator: Generator {
     #[inline]
     unsafe fn fill_raw<T>(&mut self, dst: &mut [T]) {
         // SAFETY: The caller has promised not to be a fucking dumbass.
-        let dst_as_bytes = unsafe { util::as_raw_bytes_mut(dst) };
+        let dst_as_bytes = unsafe { util::as_bytes_mut(dst) };
         self.fill_bytes(dst_as_bytes);
     }
 
