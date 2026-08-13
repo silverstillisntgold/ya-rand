@@ -28,5 +28,5 @@ rayon = "1.12"
 default = ["secure", "std"]
 alloc = []
 inline = []
-secure = ["chachacha"]
+secure = ["dep:chachacha"]
 std = ["alloc", "getrandom/std"]
