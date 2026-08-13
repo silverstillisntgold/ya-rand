@@ -100,7 +100,7 @@ assert!(s.len() == Base16::MIN_LEN);
   distributions, error type conversions for getrandom, and the **alloc** feature.
 - **alloc**: Enabled by default. Normally enabled through **std**, but can be enabled on it's own for use in
   `no_std` environments which provide allocation primitives. Enables random generation of secure
-  `String` values when using [`SecureRng`]. Does nothing without the **secure** feature.
+  `String` values when using [`SecureRng`].
 - **secure**: Enabled by default. Provides [`SecureRng`], which implements [SecureGenerator]. The backing generator
   is ChaCha with 10 rounds and a 64-bit counter.
 - **inline**: Marks all [`Generator::u64`] implementations with `#[inline]`. Should generally increase
@@ -178,7 +178,7 @@ As an example, modern Windows versions (10 and newer) have a crypto subsystem th
 #![deny(missing_docs)]
 #![no_std]
 
-#[cfg(all(feature = "alloc", feature = "secure"))]
+#[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
