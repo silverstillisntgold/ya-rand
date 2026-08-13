@@ -17,8 +17,13 @@ pub unsafe fn as_bytes_mut<T>(slice: &mut [T]) -> &mut [u8] {
 /// of a SplitMix64 PRNG, which is seeded using `seed`.
 #[inline]
 pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
+    const {
+        assert!(SIZE != 0);
+    }
+
     let mut state = [0; _];
     let mut x = seed;
+
     // SplitMix64 implementation from https://prng.di.unimi.it/splitmix64.c.
     for v in &mut state {
         x = x.wrapping_add(0x9E3779B97F4A7C15);
@@ -33,11 +38,28 @@ pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
 /// Attempts to return an array filled with random data from operating system entropy.
 #[inline]
 pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], getrandom::Error> {
+    const {
+        assert!(SIZE != 0);
+    }
+
     let mut state = [0; _];
-    // SAFETY: I'm over here strokin' my dick I got lotion on my dick right now.
-    let state_as_bytes = unsafe { as_bytes_mut(&mut state) };
-    getrandom::fill(state_as_bytes)?;
-    Ok(state)
+
+    loop {
+        // SAFETY: I'm over here strokin' my dick I got lotion on my dick right now.
+        getrandom::fill(unsafe { as_bytes_mut(&mut state) })?;
+
+        // Reject states whose Hamming weight lies in the outer
+        // 6.25% of the possible range at either extreme.
+        let bits = SIZE as u32 * u64::BITS;
+        let ones = state.iter().cloned().map(u64::count_ones).sum::<u32>();
+        let zeros = bits - ones;
+        let threshold = bits / 16;
+        if ones.min(zeros) >= threshold {
+            return Ok(state);
+        }
+
+        core::hint::cold_path();
+    }
 }
 
 /// Performs unsigned 128-bit multiplication on `x` and `y`, returning
