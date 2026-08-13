@@ -345,7 +345,7 @@ pub trait Generator: Sized {
     /// ```
     #[inline]
     fn bound_inclusive(&mut self, max: u64) -> u64 {
-        self.bound(max + 1)
+        self.bound(max.saturating_add(1))
     }
 
     /// Returns a uniformly distributed `i64` in the interval [`min`, `max`)
@@ -356,7 +356,7 @@ pub trait Generator: Sized {
         // We've documented the expected relationship between `min` and `max`,
         // but we want to tolerate the user doing stupid shit with them.
         let delta = max.abs_diff(min);
-        (self.bound(delta) as i64) + min
+        min.wrapping_add(self.bound(delta) as i64)
     }
 
     /// Returns a uniformly distributed `i64` in the interval \[`min`, `max`\]
@@ -486,7 +486,7 @@ pub trait Generator: Sized {
 
     /// Returns an exponentially distributed `f64` with user-defined `lambda`.
     ///
-    /// It is expected that `lambda.abs()` != `0.0`.
+    /// It is expected that `lambda` is finite and > `0.0`.
     #[inline]
     #[cfg(feature = "std")]
     fn f64_exponential_lambda(&mut self, lambda: f64) -> f64 {
