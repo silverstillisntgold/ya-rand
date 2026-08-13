@@ -16,7 +16,8 @@ of the [RFC 4648] encodings and alphanumeric encoding.
 /// The `CHARSET` field must only contain valid ascii characters,
 /// meaning that all u8 values must be in the interval [0, 128).
 /// Failure to uphold this condition will result in generation of
-/// invalid `String` values.
+/// invalid `String` values. The field must also contain no repeat
+/// values, meaning the max valid length of the field is 128.
 ///
 /// The `MIN_LEN` field must be at least ceil(log<sub>`base`</sub>(2<sup>128</sup>)),
 /// where `base` is the length of the `CHARSET` field. Failure to uphold
