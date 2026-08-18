@@ -45,28 +45,16 @@ pub trait SecureGenerator: Generator {
     /// ```
     /// use ya_rand::*;
     ///
-    /// #[repr(C)]
-    /// #[derive(Clone, Copy, Default, PartialEq, Eq)]
-    /// struct NotAByte {
-    ///     x: u16,
-    ///     y: u32,
-    ///     z: u64,
-    /// }
-    ///
     /// let mut rng = new_rng_secure();
-    /// let zero_value = NotAByte::default();
-    /// let mut data = [zero_value; 69];
-    /// unsafe {
-    ///     rng.fill_raw(&mut data);
-    /// }
-    /// assert!(data.into_iter().any(|v| v != zero_value));
+    /// let mut data = [0_u64; 69];
+    /// // SAFETY: `data` is just a collection of bytes.
+    /// unsafe { rng.fill_raw(&mut data) };
+    /// assert!(data.iter().all(|&v| v != 0));
     /// ```
     ///
     /// # Safety
     ///
     /// `T` must be valid as nothing more than a collection of bytes.
-    /// Integer types are the simplest example of this, but structs of integer
-    /// types generally should fall under the same umbrella.
     #[inline]
     unsafe fn fill_raw<T>(&mut self, dst: &mut [T]) {
         // SAFETY: The caller has promised not to be a fucking dumbass.
@@ -77,7 +65,7 @@ pub trait SecureGenerator: Generator {
     /// Generates a random `String` with length `len`, using the provided
     /// `Encoder` to determine character set and minimum secure length. Because
     /// character sets can only contain valid ascii values, the length of the created
-    /// `String` reprensents both the size of the `String` in bytes, and the
+    /// `String` represents both the size of the `String` in bytes, and the
     /// amount of characters it contains.
     ///
     /// Values of `len` which are less than what would be considered secure for the
@@ -112,8 +100,8 @@ pub trait SecureGenerator: Generator {
     ///     );
     /// }
     /// ```
-    #[cfg(feature = "alloc")]
     #[inline(never)]
+    #[cfg(feature = "alloc")]
     fn text<E: Encoder>(&mut self, len: usize) -> String {
         const BYTE_VALUES: usize = 1 << u8::BITS;
         // Force all values of the vector to be initialized to a
@@ -183,7 +171,7 @@ pub trait Generator: Sized {
     ///
     /// Unlike [`Generator::new`], which will panic on failure, `try_new`
     /// propagates the error-handling responsibility to the user. But the probability
-    /// of your operating systems RNG failing is absurdly low, and in the rare case that it
+    /// of your operating system's RNG failing is absurdly low, and in the rare case that it
     /// does fail, that's not really an issue most users are going to be able to address.
     ///
     /// Stick to using [`crate::new_rng`], unless you really need a generator of a
@@ -258,7 +246,9 @@ pub trait Generator: Sized {
     /// The value of `bit_count` is clamped to 64.
     #[inline]
     fn bits(&mut self, bit_count: u32) -> u64 {
-        self.u64() >> (u64::BITS - bit_count.min(u64::BITS))
+        // Need to use unbounded shift to correctly handle `bit_count` == 0.
+        self.u64()
+            .unbounded_shr(u64::BITS - bit_count.min(u64::BITS))
     }
 
     /// A simple coinflip, returning a `bool` that has a 50% chance of being true.
@@ -312,7 +302,11 @@ pub trait Generator: Sized {
     fn bound(&mut self, max: u64) -> u64 {
         // Lemire's nearly divisionless method: https://arxiv.org/abs/1805.10941.
         let (mut high, mut low) = util::wide_mul(self.u64(), max);
+
         if low < max {
+            // We don't necessarily care about the statistical odds of this path
+            // being hit, but we know that it should be the slow path because
+            // we're always going to be doing a division if we reach it.
             core::hint::cold_path();
             // The dreaded division.
             let threshold = max.wrapping_neg() % max;
@@ -320,10 +314,22 @@ pub trait Generator: Sized {
                 (high, low) = util::wide_mul(self.u64(), max);
             }
         }
-        debug_assert!(
-            (max != 0 && high < max) || high == 0,
-            "BUG: assertion should be unreachable"
-        );
+
+        {
+            let is_valid = (max != 0 && high < max) || high == 0;
+
+            #[cfg(debug_assertions)]
+            assert!(is_valid, "BUG: assertion should be unreachable");
+
+            // SAFETY: `high` is the upper half of the 128-bit product `x * max`.
+            // If max != 0, x < 2^64 implies high < max.
+            // If max == 0, the product is zero, so high == 0.
+            #[cfg(not(debug_assertions))]
+            unsafe {
+                core::hint::assert_unchecked(is_valid);
+            }
+        }
+
         high
     }
 
@@ -345,7 +351,7 @@ pub trait Generator: Sized {
     /// ```
     #[inline]
     fn bound_inclusive(&mut self, max: u64) -> u64 {
-        self.bound(max.saturating_add(1))
+        self.bound(max + 1)
     }
 
     /// Returns a uniformly distributed `i64` in the interval [`min`, `max`)
@@ -406,11 +412,10 @@ pub trait Generator: Sized {
             // Start with an interval of [0, 2^54)
             x = self.bits(BITS) as i64;
             // Interval is now (0, 2^54)
-            if x == 0 {
-                core::hint::cold_path();
-                continue;
+            if x != 0 {
+                break;
             }
-            break;
+            core::hint::cold_path();
         }
         // Shift interval to (-2^53, 2^53)
         x -= OFFSET;
@@ -428,18 +433,17 @@ pub trait Generator: Sized {
             // Start with an interval of [0, 2^25)
             x = self.bits(BITS) as i64;
             // Interval is now (0, 2^25)
-            if x == 0 {
-                core::hint::cold_path();
-                continue;
+            if x != 0 {
+                break;
             }
-            break;
+            core::hint::cold_path();
         }
         // Shift interval to (-2^24, 2^24)
         x -= OFFSET;
         x as f32 / F32_DIVISOR
     }
 
-    /// Returns two indepedent and normally distributed `f64` values with
+    /// Returns two independent and normally distributed `f64` values with
     /// a `mean` of `0.0` and a `stddev` of `1.0`.
     #[cfg(feature = "std")]
     fn f64_normal(&mut self) -> (f64, f64) {
@@ -462,10 +466,11 @@ pub trait Generator: Sized {
         (x * t, y * t)
     }
 
-    /// Returns two indepedent and normally distributed `f64` values with
+    /// Returns two independent and normally distributed `f64` values with
     /// user-defined `mean` and `stddev`.
     ///
-    /// It is expected that `stddev.abs()` != `0.0`.
+    /// It is expected that both `mean` and `stddev` are finite values,
+    /// and that `stddev.abs()` != `0.0`.
     #[inline]
     #[cfg(feature = "std")]
     fn f64_normal_distribution(&mut self, mean: f64, stddev: f64) -> (f64, f64) {
@@ -536,7 +541,7 @@ pub trait Generator: Sized {
 
     /// Returns a randomly selected ASCII character from the pool of:
     ///
-    /// `'A'..='Z'`, and`'a'..='z'`
+    /// `'A'..='Z'`, and `'a'..='z'`
     #[inline]
     fn ascii_alphabetic(&mut self) -> char {
         *self.choose(&ALPHANUMERIC[..52]).unwrap() as char

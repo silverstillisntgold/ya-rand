@@ -16,8 +16,8 @@ of the [RFC 4648] encodings and alphanumeric encoding.
 /// The `CHARSET` field must only contain valid ascii characters,
 /// meaning that all u8 values must be in the interval [0, 128).
 /// Failure to uphold this condition will result in generation of
-/// invalid `String` values. The field must also contain no repeat
-/// values, meaning the max valid length of the field is 128.
+/// invalid `String` values. The field must also contain between 2
+/// and 128 characters, all of which must be unique.
 ///
 /// The `MIN_LEN` field must be at least ceil(log<sub>`base`</sub>(2<sup>128</sup>)),
 /// where `base` is the length of the `CHARSET` field. Failure to uphold
@@ -70,7 +70,7 @@ unsafe impl Encoder for Base32 {
     const MIN_LEN: usize = 26;
 }
 
-/// Base32 (extended hexidecimal) encoding, as specified by RFC 4648.
+/// Base32 (extended hexadecimal) encoding, as specified by RFC 4648.
 ///
 /// Minimum secure length is 26.
 pub struct Base32Hex;
@@ -79,7 +79,7 @@ unsafe impl Encoder for Base32Hex {
     const MIN_LEN: usize = 26;
 }
 
-/// Base16 (hexidecimal) encoding, as specified by RFC 4648.
+/// Base16 (hexadecimal) encoding, as specified by RFC 4648.
 ///
 /// Minimum secure length is 32.
 pub struct Base16;

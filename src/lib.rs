@@ -81,11 +81,10 @@ assert!(digit.is_ascii_digit());
 let mut secure_rng = new_rng_secure();
 
 // We still have access to all the same methods...
-let val = rng.f64();
+let val = secure_rng.f64();
 assert!(0.0 <= val && val < 1.0);
 
-// ...but since the CRNG is secure, we also
-// get some nice extras.
+// ...but since the CRNG is secure, we also get some nice extras.
 // Here, we generate a string of random hexidecimal
 // characters (base 16), with the shortest length guaranteed
 // to be secure.
@@ -158,7 +157,7 @@ by a highly optimized ChaCha10 implementation from the [`chachacha`] crate.
 It functions identically to the other provided RNGs, but with added functionality that wouldn't be safe to
 use on pseudo RNGs. 10 rounds? Wtf? Yes, 10 rounds. 8 is technically completely fine (read the [`Too Much Crypto`]
 paper if you don't believe me), but many would argue that 12 is the only reasonable choice. These people are just
-being pedantic for the sake of, but I've opted to use 10 rounds as a reasonable middle ground.
+being pedantic for the sake of it, but I've opted to use 10 rounds as a reasonable middle ground.
 
 The security guarantees made to the user are identical to those made by ChaCha as an algorithm. It is up
 to you to determine if those guarantees meet the demands of your use case.

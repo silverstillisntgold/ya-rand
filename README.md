@@ -74,11 +74,10 @@ assert!(digit.is_ascii_digit());
 let mut secure_rng = new_rng_secure();
 
 // We still have access to all the same methods...
-let val = rng.f64();
+let val = secure_rng.f64();
 assert!(0.0 <= val && val < 1.0);
 
-// ...but since the CRNG is secure, we also
-// get some nice extras.
+// ...but since the CRNG is secure, we also get some nice extras.
 // Here, we generate a string of random hexidecimal
 // characters (base 16), with the shortest length guaranteed
 // to be secure.
