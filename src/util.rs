@@ -32,6 +32,7 @@ pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
         z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
         *v = z ^ (z >> 31);
     }
+
     state
 }
 
@@ -44,6 +45,8 @@ pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], getrandom:
 
     let mut state = [0; _];
 
+    // This function is used for non-secure backends, which all explicitly state
+    // they are sensitive to initial seeds with shitty Hamming weights.
     loop {
         // SAFETY: I'm over here strokin' my dick I got lotion on my dick right now.
         getrandom::fill(unsafe { as_bytes_mut(&mut state) })?;
@@ -54,10 +57,11 @@ pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], getrandom:
         let ones = state.iter().cloned().map(u64::count_ones).sum::<u32>();
         let zeros = bits - ones;
         let threshold = bits / 16;
-        if ones.min(zeros) >= threshold {
+        if ones.min(zeros) > threshold {
             return Ok(state);
         }
 
+        // Odds of hitting this path are less than 2^-128 for all PRNGs.
         core::hint::cold_path();
     }
 }
