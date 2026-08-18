@@ -180,7 +180,7 @@ struct SecureStdRng {
 }
 
 impl Generator for SecureStdRng {
-    fn try_new() -> Result<Self, getrandom::Error> {
+    fn try_new() -> Result<Self, GetrandomError> {
         let mut data = [0; _];
         getrandom::fill(&mut data)?;
         let internal = StdRng::from_seed(data);
@@ -200,7 +200,7 @@ struct SecureChaCha20 {
 }
 
 impl Generator for SecureChaCha20 {
-    fn try_new() -> Result<Self, getrandom::Error> {
+    fn try_new() -> Result<Self, GetrandomError> {
         let mut data = [0; _];
         getrandom::fill(&mut data)?;
         let internal = ChaCha8Rng::from_seed(data);

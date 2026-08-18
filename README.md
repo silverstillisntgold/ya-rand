@@ -35,12 +35,18 @@ So here we are.
 
 ## Usage
 
+For your convenience, [`getrandom::Error`] is re-exported as `GetrandomError` at the crate root.
+This allows you to avoid having an explicit [`getrandom`] dependency.
+
 "How do I access the thread-local RNG?" There isn't one, and unless Rust improves the performance and
 ergonomics of the TLS implementation, there probably won't ever be. Create a local instance when and
 where you need one and use it while you need it. If you need an RNG to stick around for a while, passing
 it between functions or storing it in structs is a perfectly valid solution.
 
 Here are a few examples to get you started, see https://docs.rs/ya-rand for full documentation and more examples.
+
+[`getrandom`]: https://crates.io/crates/getrandom
+[`getrandom::Error`]: https://docs.rs/getrandom/latest/getrandom/struct.Error.html
 
 ```rust
 use ya_rand::*;

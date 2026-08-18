@@ -38,7 +38,7 @@ pub fn state_from_seed<const SIZE: usize>(seed: u64) -> [u64; SIZE] {
 
 /// Attempts to return an array filled with random data from operating system entropy.
 #[inline]
-pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], getrandom::Error> {
+pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], crate::GetrandomError> {
     const {
         assert!(SIZE != 0);
     }

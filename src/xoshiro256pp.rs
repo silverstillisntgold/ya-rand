@@ -26,7 +26,7 @@ impl SeedableGenerator for Xoshiro256pp {
 }
 
 impl Generator for Xoshiro256pp {
-    fn try_new() -> Result<Self, getrandom::Error> {
+    fn try_new() -> Result<Self, crate::GetrandomError> {
         let state = util::state_from_entropy()?;
         Ok(Self { state })
     }

@@ -26,7 +26,7 @@ impl SeedableGenerator for RomuTrio {
 }
 
 impl Generator for RomuTrio {
-    fn try_new() -> Result<Self, getrandom::Error> {
+    fn try_new() -> Result<Self, crate::GetrandomError> {
         let state = util::state_from_entropy()?;
         Ok(Self { state })
     }

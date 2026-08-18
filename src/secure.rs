@@ -53,7 +53,7 @@ impl SecureGenerator for SecureRng {
 }
 
 impl Generator for SecureRng {
-    fn try_new() -> Result<Self, getrandom::Error> {
+    fn try_new() -> Result<Self, crate::GetrandomError> {
         // We want to randomize **all** bits of the matrix, even the counter.
         let mut state = [0; _];
         getrandom::fill(&mut state)?;

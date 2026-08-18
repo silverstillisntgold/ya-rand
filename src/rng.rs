@@ -176,7 +176,7 @@ pub trait Generator: Sized {
     ///
     /// Stick to using [`crate::new_rng`], unless you really need a generator of a
     /// different type (you probably don't), then use `new` on your desired type.
-    fn try_new() -> Result<Self, getrandom::Error>;
+    fn try_new() -> Result<Self, crate::GetrandomError>;
 
     /// Returns a uniformly distributed `u64` in the interval [0, 2<sup>64</sup>).
     fn u64(&mut self) -> u64;

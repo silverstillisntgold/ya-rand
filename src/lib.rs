@@ -36,6 +36,9 @@ So here we are.
 
 ## Usage
 
+For your convenience, [`getrandom::Error`] is re-exported as [`GetrandomError`] at the crate root.
+This allows you to avoid having an explicit `getrandom` dependency.
+
 Import the contents of the library and use [`new_rng`] to create new RNGs wherever
 you need them. Then call whatever method you require on those instances. All methods available
 are directly accessible through any generator instance via the dot operator, and are named
@@ -185,6 +188,7 @@ extern crate std;
 #[cfg(feature = "secure")]
 pub use {rng::SecureGenerator, secure::SecureRng};
 
+pub use getrandom::Error as GetrandomError;
 pub use rng::{Generator, SeedableGenerator};
 pub use romuquad::RomuQuad;
 pub use romutrio::RomuTrio;
