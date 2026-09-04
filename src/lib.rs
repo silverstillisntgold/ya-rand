@@ -129,7 +129,7 @@ should be more than enough.
 
 [romurand]: https://romu-random.org/
 
-All generators output a distinct `u64` value on each call, and the various methods used for transforming
+All generators produce a uniformly distributed u64 on each call, and the various methods used for transforming
 those outputs into more usable forms are all high-quality and well-documented. Placing an upper bound
 on these values uses [Lemire's method]. Both inclusive bounding and range-based bounding are applications
 of this method, with a few intermediary steps to adjust the bound and apply shifts as needed.
@@ -177,7 +177,7 @@ But in practice this is extraordinarily unlikely, and isn't something the end-us
 As an example, modern Windows versions (10 and newer) have a crypto subsystem that will never fail.
 */
 
-#![deny(missing_docs)]
+#![forbid(missing_docs)]
 #![no_std]
 
 #[cfg(feature = "alloc")]
@@ -197,6 +197,7 @@ pub use xoshiro512pp::Xoshiro512pp;
 
 #[cfg(all(feature = "alloc", feature = "secure"))]
 pub mod encoding;
+
 #[cfg(feature = "secure")]
 mod secure;
 

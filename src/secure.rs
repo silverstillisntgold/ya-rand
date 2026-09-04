@@ -2,6 +2,7 @@ use crate::rng::{Generator, SecureGenerator};
 use chachacha::{BATCH_BYTES, ChaChaDjb};
 use core::fmt;
 
+/// ChaCha with 10 rounds, a 64-bit counter, and a 64-bit nonce.
 type ChaCha = ChaChaDjb<10>;
 
 union Buffer {
@@ -30,7 +31,7 @@ impl Buffer {
 ///
 /// The current implementation uses ChaCha with 10 rounds and a 64-bit counter.
 /// This allows for 1 ZiB (2<sup>70</sup> bytes) of output before repeating.
-/// That's over 147 **quintillion** calls to [`SecureRng::u64`].
+/// That's more than 147 **quintillion** calls to [`SecureRng::u64`].
 pub struct SecureRng {
     buffer: Buffer,
     rng: ChaCha,

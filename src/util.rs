@@ -52,7 +52,7 @@ pub fn state_from_entropy<const SIZE: usize>() -> Result<[u64; SIZE], crate::Get
         getrandom::fill(unsafe { as_bytes_mut(&mut state) })?;
 
         // Reject states whose Hamming weight lies in the outer
-        // 6.25% of the possible range at either extreme.
+        // 6.25% of the possible range at either of the extremes.
         let bits = SIZE as u32 * u64::BITS;
         let ones = state.iter().cloned().map(u64::count_ones).sum::<u32>();
         let zeros = bits - ones;
